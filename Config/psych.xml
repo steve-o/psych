@@ -1,0 +1,319 @@
+<?xml version="1.0"?>
+<!-- psych.xml
+
+     Velocity Analytics Engine plugin configuration file.
+
+     Notice:
+       * All XML elements must have a closing tag.
+       * XML tags are case sensitive.
+       * XML elements must be properly nested.
+       * XML attribute values must be quoted.
+       * Comments may appear anywhere in a document outside other markup.
+       * The string (double-hyphen) must not occur within comments.
+
+  -->
+<PluginFrameworkModule id="psych">
+
+<!-- Absolute path of plugin library -->
+	<Lib id="psychLib" path="C:/Vhayu/Engine/Bin64/psych.dll"/>
+
+<!-- Velocity boiler plate -->
+	<UserPlugin id="psychPlugin" type="psychPlugin">
+
+<config>
+
+<!-- RFA settings
+
+     Override settings in this file with the Windows registry by setting the key name
+     as a parameter, e.g.
+
+	<Rfa key="HKLM/SOFTWARE/Reuters/RFA/psych">
+
+     NB:  RFA will raise an exception and the plugin will terminate if at least one value
+     is not defined underneath the key.
+
+  -->
+	<Rfa>
+
+<!-- TREP-RT service name this plugin provides, compare to IDN_RDF or IDN_SELECTFEED. -->
+		<service name="hPSYCH"/>
+
+<!-- One or more servers may be listed.  This plugin is a non-interactive provider and uses
+     port 14003 by default compared with interactive providers that usually use port 14002.
+     As a non-interactive provider the TCP connection will be initiated by the plugin and not
+     the ADH, configure firewalls appropriately.
+
+  -->
+		<session name="SESSIONA">
+			<publisher name="PUBLISHERA"/>		<!-- Name used for logging. -->
+			<connection name="CONNECTIONA" defaultPort="14003">
+				<server>adh1.local</server>
+			</connection>
+<!-- DACS required parameters. -->
+			<login applicationId="256"
+				instanceId="Instance1"
+				userName="user1"/>
+		</session>
+
+		<session name="SESSIONB">
+			<publisher name="PUBLISHERB"/>
+			<connection name="CONNECTIONB">
+				<server>adh2.local:14003</server>
+			</connection>
+			<login applicationId="256"
+				instanceId="Instance1"
+				userName="user1"/>
+		</session>
+
+<!-- Clutter -->
+		<monitor name="ApplicationLoggerMonitorName"/>
+		<eventQueue name="EventQueueName"/>
+		<vendor name="Thomson Reuters"/>
+	</Rfa>
+
+<!-- Insert comment here.
+  -->
+	<psych href="http://pipeline2m.velocity.marketpsychdata.com/feed/minutely/">
+
+<!-- 2.2.2 Equities -->
+		<equities newsref="news/equities-latest.n.txt"
+			socialref="socialmedia/equities-latest.n.txt">
+
+<!-- 2.2.2.2 Fields -->
+			<field name="Buzz"			id="7506"/>
+			<field name="Sentiment"			id="7507"/>
+			<field name="Optimism"			id="7508"/>
+			<field name="Gloom"			id="7509"/>
+			<field name="Fear"			id="7510"/>
+			<field name="Joy"			id="7511"/>
+			<field name="Anger"			id="7512"/>
+			<field name="Innovation"		id="7513"/>
+			<field name="Trust"			id="7514"/>
+			<field name="Violence"			id="7515"/>
+			<field name="Conflict"			id="7516"/>
+			<field name="Stress"			id="7517"/>
+			<field name="Urgency"			id="7518"/>
+			<field name="EconomicUncertainty"	id="7519"/>
+			<field name="FundamentalStrength"	id="7520"/>
+			<field name="Bubbleometer"		id="7521"/>
+			<field name="EarningsExpectations"	id="7523"/>	<!-- out-of-order -->
+			<field name="Layoffs"			id="7525"/>	<!-- out-of-order -->
+			<field name="Litigation"		id="7526"/>	<!-- out-of-order -->
+			<field name="UpgradeVsDowngradeBuzz"	id="7527"/>	<!-- out-of-order -->
+			<field name="Mergers"			id="7524"/>	<!-- out-of-order -->
+			<field name="Volatility"		id="-1"/>
+			<field name="PriceForecast"		id="7522"/>	<!-- out-of-order -->
+
+
+<!-- Exchange-traded funds -->
+<!-- 2.2.2.1.1 Index-Driven RICs -->
+			<item name="SPY.P" src="SP500"/>
+			<item name="IWM.P" src="Russell2000"/>
+			<item name="QQQ.O" src="Nasdaq100"/>
+			<item name="DIA.P" src="DowJones30"/>
+
+<!-- 2.2.2.1.2 TRBC Economic Sector-Driven RICs -->
+			<item name="IYW.P" src="Technology"/>
+			<item name="XLE.P" src="Energy"/>
+			<item name="XLU.P" src="Utilities"/>
+			<item name="XLB.P" src="Basic Materials"/>
+			<item name="XLV.P" src="Healthcare"/>
+			<item name="IYZ.P" src="Telecommunications (US)"/>
+			<item name="XLF.P" src="Financials"/>
+			<item name="VIS.P" src="Industrials"/>
+			<item name="XLP.P" src="Consumer Staples"/>
+			<item name="XLY.P" src="Consumer Discretionary"/>
+
+<!-- 2.2.2.1.3 TRBC Business Sector-Driven RICs -->
+			<item name="IYC.P" src="Consumer Services"/>
+			<item name="IYR.P" src="Real Estate"/>
+			<item name="IYT.P" src="Transportation"/>
+			<item name="XRT.P" src="Retail"/>
+
+<!-- 2.2.2.1.4 TRBC Industry Group-Driven RICs -->
+			<item name="ITA.P" src="US Aerospace and Defence"/>
+			<item name="KOL.P" src="Coal"/>
+			<item name="PBW.P" src="Clean Energy"/>
+			<item name="SMH.P" src="Semiconductors"/>
+			<item name="XHB.P" src="Homebuilders"/>
+
+<!-- 2.2.2.1.5 TRBC Industry-Driven RICs -->
+			<item name="FAA.P" src="Airlines"/>
+			<item name="KBE.P" src="Banking"/>
+			<item name="PXE.P" src="Energy Exploration and Production"/>
+
+<!-- 2.2.2.1.6 Other RICs -->
+			<item name="PKB.P" src="Building and Construction"/>
+			<item name="COPX.P" src="Copper Miners"/>
+			<item name="OIH.P" src="Oil Services"/>
+			<item name="IBB.OQ" src="Biotech"/>
+			<item name="PBJ.P" src="Food and Beverage"/>
+			<item name="GDX.P" src="Gold Miners"/>
+			<item name="KRE.P" src="Regional Banking"/>
+			<item name="TAN.P" src="Solar Energy"/>
+			<item name="FDN.P" src="Internet"/>
+			<item name="MOO.P" src="Agribusiness"/>
+			<item name="PEJ.P" src="Leisure and Entertainment"/>
+			<item name="BJK.P" src="Gaming"/>
+			<item name="PBS.P" src="Media"/>
+			<item name="SOCL.O" src='Social Media"/>
+	
+		</equities>
+
+<!-- 2.2.3 Currencies -->
+		<currencies newsref="news/currencies-latest.n.txt"
+			socialref="socialmedia/currencies-latest.n.txt">
+
+<!-- 2.2.3.2 Fields -->
+			<field name="Buzz"			id="7506"/>
+			<field name="Sentiment"			id="7507"/>
+			<field name="Optimism"			id="7508"/>
+			<field name="Fear"			id="7510"/>
+			<field name="Joy"			id="7511"/>
+			<field name="Conflict"			id="7516"/>
+			<field name="Trust"			id="7514"/>
+			<field name="Violence"			id="7515"/>
+			<field name="Urgency"			id="7518"/>
+			<field name="Uncertainty"		id="7519"/>
+			<field name="CarryTradeBuzz"		id="-1"/>
+			<field name="CurrencyPegInstability"	id="-1"/>
+			<field name="CurrencyPriceForecast"	id="7522"/>
+			<field name="CurrencyPriceMomentum"	id="-1"/>
+			<field name="PriceUp"			id="-1"/>
+
+<!-- 2.2.3.1 Instruments -->
+			<item name="AUD=" src="Australian Dollar"/>
+			<item name="BRL=" src="Brazilian Real"/>
+			<item name="CAD=" src="Canadian Dollar"/>
+			<item name="CNY=" src="China Yuan Renminbi"/>
+			<item name="DKK=" src="Denmark Krone"/>
+			<item name="EGP=" src="Egypt Pound"/>
+			<item name="EUR=" src="Euro"/>
+			<item name="HKD=" src="Hong Kong Dollar"/>
+			<item name="INR=" src="India Rupee"/>
+			<item name="IDR=" src="Indonesia Rupiah"/>
+			<item name="IRR=" src="Iran Rial"/>
+			<item name="ILS=" src="Israel Shekel"/>
+			<item name="JPY=" src="Japan Yen"/>
+			<item name="MYR=" src="Malaysia Ringgit"/>
+			<item name="MXN=" src="Mexico Peso"/>
+			<item name="NZD=" src="New Zealand dollar"/>
+			<item name="NOK=" src="Norway Krone"/>
+			<item name="RUB=" src="Russia Ruble"/>
+			<item name="SGD=" src="Singapore Dollar"/>
+			<item name="ZAR=" src="South Africa Rand"/>
+			<item name="KRW=" src="South Korea Won"/>
+			<item name="SEK=" src="Sweden Krona"/>
+			<item name="CHF=" src="Swiss Franc"/>
+			<item name="TWD=" src="Taiwan Dollar"/>
+			<item name="THB=" src="Thai Baht"/>
+			<item name="TRY=" src="Turkey Lira"/>
+			<item name="USD=" src="U.S. Dollar"/>
+			<item name="AED=" src="United Arab Emirates Dirham"/>
+			<item name="GBP=" src="United Kingdom Pound"/>
+
+		</currencies>
+
+<!-- 2.2.4 Agricultural Commodities -->
+		<commodities type="agricultural" newsref="news/ag_commodities-latest.n.txt"
+			socialref="socialmedia/ag_commodities-latest.n.txt">
+
+<!-- 2.2.4.2 Fields -->
+			<field name="Buzz"			id="7506"/>
+			<field name="Sentiment"			id="7507"/>
+			<field name="Optimism"			id="7508"/>
+			<field name="Fear"			id="7510"/>
+			<field name="Joy"			id="7511"/>
+			<field name="Conflict"			id="7516"/>
+			<field name="Trust"			id="7514"/>
+			<field name="Violence"			id="7515"/>
+			<field name="Urgency"			id="7518"/>
+			<field name="Uncertainty"		id="7519"/>
+			<field name="PriceForecast"		id="7522"/>
+			<field name="SurplusVsShortage"		id="-1"/>
+			<field name="AgDisease"			id="-1"/>
+			<field name="WeatherDamage"		id="-1"/>
+			<field name="RegulatoryIssues"		id="-1"/>
+			<field name="ProductionVolume"		id="-1"/>
+			<field name="Subsidies"			id="-1"/>
+			<field name="SubsidiesSentiment"	id="-1"/>
+			<field name="SupplyVsDemandForecast"	id="-1"/>
+			<field name="AcreageCultivated"		id="-1"/>
+			<field name="ConsumptionVolume"		id="-1"/>
+
+<!-- 2.2.4.1 Instruments -->
+			<item name="CATL" src="Cattle"/>
+			<item name="COC" src="Cocoa"/>
+			<item name="COF" src="Coffee"/>
+			<item name="COR" src="Corn"/>
+			<item name="COT" src="Cotton"/>
+			<item name="HOGS" src="Hogs"/>
+			<item name="ORJ" src="Orange Juice"/>
+			<item name="POIL" src="Palm Oil"/>
+			<item name="RICE1" src="Rice"/>
+			<item name="SOY1" src="Soybeans"/>
+			<item name="SUG" src="Sugar"/>
+			<item name="WHT" src="Wheat"/>
+
+		</commodities>
+
+<!-- 2.2.5 Energy and Materials Commodities -->
+		<commodities type="energyandmaterials" newsref="news/em_commodities-latest.n.txt"
+			socialref="socialmedia/em_commodities-latest.n.txt">
+
+<!-- 2.2.5.2 Fields -->
+			<field name="Buzz"			id="7506"/>
+			<field name="Sentiment"			id="7507"/>
+			<field name="Optimism"			id="7508"/>
+			<field name="Fear"			id="7510"/>
+			<field name="Joy"			id="7511"/>
+			<field name="Conflict"			id="7516"/>
+			<field name="Trust"			id="7514"/>
+			<field name="Violence"			id="7515"/>
+			<field name="Urgency"			id="7518"/>
+			<field name="Uncertainty"		id="7519"/>
+			<field name="PriceInflation"		id="-1"/>
+			<field name="PriceForecast"		id="7522"/>
+			<field name="SurplusVsShortage"		id="-1"/>
+			<field name="RegulatoryIssues"		id="-1"/>
+			<field name="SafetyAccident"		id="-1"/>
+			<field name="ProductionVolume"		id="-1"/>
+			<field name="ConsumptionVolume"		id="-1"/>
+			<field name="NewExploration"		id="-1"/>
+			<field name="SupplyVsDemandForecast"	id="-1"/>
+			<field name="ProductionCost"		id="-1"/>
+
+<!-- 2.2.5.1 Instruments -->
+			<item name="ALU" src="Aluminum"/>	<!-- Spelling incorrect -->
+			<item name="BIOF" src="Biofuels"/>
+			<item name="COA" src="Coal"/>
+			<item name="CPPR" src="Copper"/>
+			<item name="CRU" src="CrudeOil"/>
+			<item name="BIO ETH" src="Ethanol"/>
+			<item name="MOG" src="Gasoline"/>
+			<item name="GOL" src="Gold"/>
+			<item name="HOIL" src="HeatingOil"/>
+			<item name="IRN" src="Iron"/>
+			<item name="JET" src="Jet Fuel"/>
+			<item name="LNG" src="Liquefied Natural Gas"/>
+			<item name="NAP" src="Naphtha"/>
+			<item name="NGS" src="Natural Gas"/>
+			<item name="NKL" src="Nickel"/>
+			<item name="NSEA" src="North Sea Oil"/>
+			<item name="PALL" src="Palladium"/>
+			<item name="PLAT" src="Platinum"/>
+			<item name="RAREE" src="RareEarths"/>
+			<item name="SLVR" src="Silver"/>
+			<item name="STEE" src="Steel"/>
+			<item name="URAN" src="Uranium"/>
+
+		</commodities>
+
+	</psych>
+
+
+</config>
+
+	</UserPlugin>
+
+</PluginFrameworkModule>
