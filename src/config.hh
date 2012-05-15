@@ -59,6 +59,43 @@ namespace psych
 		std::string position;
 	};
 
+	struct resource_t
+	{
+		resource_t (const std::string& name_, 
+			const std::string& path_, 
+			unsigned long entitlement_code_, 
+			const std::map<std::string, int>& fields_, 
+			const std::map<std::string, std::pair<std::string, std::string>>& items_) :
+			name (name_),
+			path (path_),
+			entitlement_code (entitlement_code_),
+			fields (fields_),
+			items (items_)
+		{
+		}
+
+/* for logging */
+		std::string name;
+
+/* latest minute feed */
+		std::string path;
+
+/* DACS numeric entitlement code (PE) */
+		unsigned long entitlement_code;
+
+/* column name to FID mapping */
+		std::map<std::string, int> fields;
+
+/* sector to RIC, topic mapping */
+		std::map<std::string, std::pair<std::string, std::string>> items;
+	};
+	
+	struct resource_compare_t {
+		bool operator() (const resource_t& lhs, const resource_t& rhs) const {
+			return lhs.path < rhs.path;
+		}
+	};
+
 	struct config_t
 	{
 		config_t();
@@ -69,6 +106,7 @@ namespace psych
 		bool parseAgentXNode (const xercesc::DOMNode* node);
 		bool parseRfaNode (const xercesc::DOMNode* node);
 		bool parseServiceNode (const xercesc::DOMNode* node);
+		bool parseDacsNode (const xercesc::DOMNode* node);
 		bool parseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
 		bool parseServerNode (const xercesc::DOMNode* node, std::string& server);
 		bool parsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
@@ -78,6 +116,10 @@ namespace psych
 		bool parseEventQueueNode (const xercesc::DOMNode* node);
 		bool parseVendorNode (const xercesc::DOMNode* node);
 		bool parsePsychNode (const xercesc::DOMNode* node);
+		bool parseResourceNode (const xercesc::DOMNode* node);
+		bool parseLinkNode (const xercesc::DOMNode* node, std::string* rel, unsigned long* id, std::string* href);
+		bool parseFieldNode (const xercesc::DOMNode* node, std::string* name, int* id);
+		bool parseItemNode (const xercesc::DOMNode* node, std::string* name, std::string* topic, std::string* src);
 
 		bool validate();
 
@@ -99,6 +141,9 @@ namespace psych
 //  TREP-RT service name, e.g. IDN_RDF.
 		std::string service_name;
 
+//  DACS service id, e.g. 1234.
+		std::string dacs_id;
+
 //  RFA sessions comprising of session names, connection names,
 //  RSSL hostname or IP address and default RSSL port, e.g. 14002, 14003.
 		std::vector<session_config_t> sessions;
@@ -111,6 +156,61 @@ namespace psych
 
 //  RFA vendor name.
 		std::string vendor_name;
+
+//  HTTP poll and publish interval in seconds.
+		std::string interval;
+
+//  Windows timer coalescing tolerable delay.
+//  At least 32ms, corresponding to two 15.6ms platform timer interrupts.
+//  Appropriate values are 10% to timer period.
+//  Specify tolerable delay values and timer periods in multiples of 50 ms.
+//  http://www.microsoft.com/whdc/system/pnppwr/powermgmt/TimerCoal.mspx
+		std::string tolerable_delay;
+
+//  Number of times to retry given a transient error: timeout or HTTP 5xx response.
+		std::string retry_count;
+
+//  Time period to wait before a retry attempt, in milliseconds.
+		std::string retry_delay_ms;
+
+//  Maximum time to retry transfer, in seconds.
+		std::string retry_timeout_ms;
+
+//  Maximum time for entire operation, in milliseconds.
+		std::string timeout_ms;
+
+//  Maximum time for connection phase, in milliseconds.
+		std::string connect_timeout_ms;
+
+//  HTTP pipelining disabled by default as frequently broken.
+		std::string enable_http_pipelining;
+
+//  Responses will be rejected above this size.
+		std::string maximum_response_size;
+
+//  Responses will be rejected below this size.
+		std::string minimum_response_size;
+
+//  HTTP encoding format to request:  "identity", "deflate", "gzip", etc.
+		std::string request_http_encoding;
+
+//  Time offset calibration constant to correct a systematic error or bias.
+		std::string time_offset_constant;
+
+//  HTTP provided file modification time clock offset sanity check, 0 disables.
+		std::string panic_threshold;
+
+//  Optional HTTP proxy for Internet access, beware most proxies do not correctly function with HTTP pipelining.
+		std::string http_proxy;
+
+//  DNS response cache time in seconds.
+		std::string dns_cache_timeout;
+
+//  Base href for all links.
+		std::string base_url;
+
+//  "Resources": equities, currencies, commodities, etc.
+		std::vector<resource_t> resources;
 	};
 
 	inline
@@ -139,6 +239,39 @@ namespace psych
 	}
 
 	inline
+	std::ostream& operator<< (std::ostream& o, const resource_t& resource) {
+		o << "{ "
+			  "name: \"" << resource.name << "\""
+			", path: \"" << resource.path << "\""
+			", entitlement_code: \"" << resource.entitlement_code << "\""
+			", fields: [ ";
+		for (auto it = resource.fields.begin();
+			it != resource.fields.end();
+			++it)
+		{
+			if (it != resource.fields.end())
+				o << ", ";
+			o << '"' << it->first << "\": " << it->second;
+		}
+		o << " ]"
+			", items: [ ";
+		for (auto it = resource.items.begin();
+			it != resource.items.end();
+			++it)
+		{
+			if (it != resource.items.end())
+				o << ", ";
+			o << '"' << it->first << "\": { "
+				  "RIC: \"" << it->second.first << "\""
+				", topic: \"" << it->second.second << "\""
+				" }";
+		}
+		o << " ]"
+			" }";
+		return o;
+	}
+
+	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
 		o << "config_t: { "
 			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
@@ -146,6 +279,7 @@ namespace psych
 			", agentx_socket: \"" << config.agentx_socket << "\""
 			", key: \"" << config.key << "\""
 			", service_name: \"" << config.service_name << "\""
+			", dacs_id: \"" << config.dacs_id << "\""
 			", sessions: [";
 		for (auto it = config.sessions.begin();
 			it != config.sessions.end();
@@ -159,6 +293,32 @@ namespace psych
 			", monitor_name: \"" << config.monitor_name << "\""
 			", event_queue_name: \"" << config.event_queue_name << "\""
 			", vendor_name: \"" << config.vendor_name << "\""
+			", interval: \"" << config.interval << "\""
+			", tolerable_delay: \"" << config.tolerable_delay << "\""
+			", retry_count: \"" << config.retry_count << "\""
+			", retry_delay_ms: \"" << config.retry_delay_ms << "\""
+			", retry_timeout_ms: \"" << config.retry_timeout_ms << "\""
+			", timeout_ms: \"" << config.timeout_ms << "\""
+			", connect_timeout_ms: \"" << config.connect_timeout_ms << "\""
+			", enable_http_pipelining: \"" << config.enable_http_pipelining << "\""
+			", maximum_response_size: \"" << config.maximum_response_size << "\""
+			", minimum_response_size: \"" << config.minimum_response_size << "\""
+			", request_http_encoding: \"" << config.request_http_encoding << "\""
+			", time_offset_constant: \"" << config.time_offset_constant << "\""
+			", panic_threshold: \"" << config.panic_threshold << "\""
+			", http_proxy: \"" << config.http_proxy << "\""
+			", dns_cache_timeout: \"" << config.dns_cache_timeout << "\""
+			", base_url: \"" << config.base_url << "\""
+			", resources: [";
+		for (auto it = config.resources.begin();
+			it != config.resources.end();
+			++it)
+		{
+			if (it != config.resources.begin())
+				o << ", ";
+			o << *it;
+		}
+		o << " ]";
 			" }";
 		return o;
 	}

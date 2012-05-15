@@ -385,7 +385,7 @@ initialize_table_psychPluginPerformanceTable(void)
 					  ASN_UNSIGNED,  /* index: psychPluginPerformanceInstance */
 					  0);
 	table_info->min_column = COLUMN_PSYCHTCLQUERYRECEIVED;
-	table_info->max_column = COLUMN_PSYCHLASTMSGSSENT;
+	table_info->max_column = COLUMN_PSYCHPSYCHCLOCKDRIFT;
     
 	iinfo = SNMP_MALLOC_TYPEDEF( netsnmp_iterator_info );
 	if (nullptr == iinfo)
@@ -552,6 +552,14 @@ psychPluginPerformanceTable_handler (
 				}
 				break;
 
+			case COLUMN_PSYCHTIMERQUERYRECEIVED:
+				{
+					const unsigned timer_query_received = psych->cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&timer_query_received, sizeof (timer_query_received));
+				}
+				break;
+
 			case COLUMN_PSYCHLASTACTIVITY:
 				{
 					union {
@@ -595,6 +603,37 @@ psychPluginPerformanceTable_handler (
 				}
 				break;
 
+			case COLUMN_PSYCHTIMERSVCTIMEMIN:
+				{
+/* conversion of 64-bit integer */
+					unsigned min_svc_time = 0;
+					if (!psych->min_refresh_time_.is_special())
+						min_svc_time = (unsigned)psych->min_refresh_time_.total_milliseconds();
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&min_svc_time, sizeof (min_svc_time));
+				}
+				break;
+
+			case COLUMN_PSYCHTIMERSVCTIMEMEAN:
+				{
+					unsigned mean_svc_time = 0;
+					if (psych->cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED] > 0)
+						mean_svc_time = (unsigned)(psych->total_refresh_time_.total_milliseconds() / psych->cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED]);
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&mean_svc_time, sizeof (mean_svc_time));
+				}
+				break;
+
+			case COLUMN_PSYCHTIMERSVCTIMEMAX:
+				{
+					unsigned max_svc_time = 0;
+					if (!psych->max_refresh_time_.is_special())
+						max_svc_time = (unsigned)psych->max_refresh_time_.total_milliseconds();
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&max_svc_time, sizeof (max_svc_time));
+				}
+				break;
+
 			case COLUMN_PSYCHMSGSSENT:
 				{
 					const unsigned msg_sent = (bool)psych->provider_ ? psych->provider_->cumulative_stats_[PROVIDER_PC_MSGS_SENT] : 0;
@@ -612,6 +651,110 @@ psychPluginPerformanceTable_handler (
 					last_activity.time32_t_value = (bool)psych->provider_ ? ((psych->provider_->last_activity_ - kUnixEpoch).total_seconds()) : 0;
 					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
 						(const u_char*)&last_activity.uint_value, sizeof (last_activity.uint_value));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTPREQUESTSENT:
+				{
+					const unsigned http_sent = psych->cumulative_stats_[PSYCH_PC_HTTP_REQUEST_SENT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_sent, sizeof (http_sent));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP1XXRECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_1XX_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP2XXRECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_2XX_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP3XXRECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_3XX_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP4XXRECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_4XX_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP5XXRECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_5XX_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP200RECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_200_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTP304RECEIVED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_304_RECEIVED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTPMALFORMED:
+				{
+					const unsigned http_rcvd = psych->cumulative_stats_[PSYCH_PC_HTTP_MALFORMED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&http_rcvd, sizeof (http_rcvd));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTPRETRIESEXCEEDED:
+				{
+					const unsigned num_retries = psych->cumulative_stats_[PSYCH_PC_HTTP_RETRIES_EXCEEDED];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&num_retries, sizeof (num_retries));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTPDCLOCKDRIFT:
+				{
+					const unsigned clock_offset = psych->cumulative_stats_[PSYCH_PC_HTTPD_CLOCK_DRIFT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&clock_offset, sizeof (clock_offset));
+				}
+				break;
+
+			case COLUMN_PSYCHHTTPCLOCKDRIFT:
+				{
+					const unsigned clock_offset = psych->cumulative_stats_[PSYCH_PC_HTTP_CLOCK_DRIFT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&clock_offset, sizeof (clock_offset));
+				}
+				break;
+
+			case COLUMN_PSYCHPSYCHCLOCKDRIFT:
+				{
+					const unsigned clock_offset = psych->cumulative_stats_[PSYCH_PC_PSYCH_CLOCK_DRIFT];
+					snmp_set_var_typed_value (var, ASN_COUNTER, /* ASN_COUNTER32 */
+						(const u_char*)&clock_offset, sizeof (clock_offset));
 				}
 				break;
 
@@ -639,7 +782,7 @@ initialize_table_psychSessionTable(void)
 {
 	DLOG(INFO) << "initialize_table_psychSessionTable()";
 
-	static const oid psychSessionTable_oid[] = {1,3,6,1,4,1,67,1,1,5};
+	static const oid psychSessionTable_oid[] = {1,3,6,1,4,1,67,2,1,5};
 	const size_t psychSessionTable_oid_len = OID_LENGTH (psychSessionTable_oid);
 	netsnmp_handler_registration* reg = nullptr;
 	netsnmp_iterator_info* iinfo = nullptr;
@@ -941,7 +1084,7 @@ initialize_table_psychSessionPerformanceTable(void)
 {
 	DLOG(INFO) << "initialize_table_psychSessionPerformanceTable()";
 
-	static const oid psychSessionPerformanceTable_oid[] = {1,3,6,1,4,1,67,1,1,6};
+	static const oid psychSessionPerformanceTable_oid[] = {1,3,6,1,4,1,67,2,1,6};
 	const size_t psychSessionPerformanceTable_oid_len = OID_LENGTH(psychSessionPerformanceTable_oid);
 	netsnmp_handler_registration* reg = nullptr;
 	netsnmp_iterator_info* iinfo = nullptr;

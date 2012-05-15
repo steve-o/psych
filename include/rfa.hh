@@ -14,6 +14,8 @@
 #include <Config/ConfigDatabase.h>
 #include <Config/ConfigTree.h>
 #include <Config/StagingConfigDatabase.h>
+#include <Dacs/AuthLock.h>
+#include <Dacs/AuthLockStatus.h>
 #include <Data/Array.h>
 #include <Data/ArrayWriteIterator.h>
 #include <Data/ArrayEntry.h>

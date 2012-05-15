@@ -44,11 +44,24 @@ namespace psych
 /* Performance Counters */
 	enum {
 		PSYCH_PC_TCL_QUERY_RECEIVED,
+		PSYCH_PC_TIMER_QUERY_RECEIVED,
 /*		PSYCH_PC_LAST_ACTIVITY,*/
 /*		PSYCH_PC_TCL_SVC_TIME_MIN,*/
 /*		PSYCH_PC_TCL_SVC_TIME_MEAN,*/
 /*		PSYCH_PC_TCL_SVC_TIME_MAX,*/
-
+		PSYCH_PC_HTTP_REQUEST_SENT,
+		PSYCH_PC_HTTP_1XX_RECEIVED,		/* Informational */
+		PSYCH_PC_HTTP_2XX_RECEIVED,		/* Success */
+		PSYCH_PC_HTTP_3XX_RECEIVED,		/* Redirect */
+		PSYCH_PC_HTTP_4XX_RECEIVED,		/* Client Error */
+		PSYCH_PC_HTTP_5XX_RECEIVED,		/* Server Error */
+		PSYCH_PC_HTTP_200_RECEIVED,		/* OK */
+		PSYCH_PC_HTTP_304_RECEIVED,		/* Not Modified */
+		PSYCH_PC_HTTP_MALFORMED,
+		PSYCH_PC_HTTP_RETRIES_EXCEEDED,
+		PSYCH_PC_HTTPD_CLOCK_DRIFT,		/* Webserver */
+		PSYCH_PC_HTTP_CLOCK_DRIFT,		/* File system */
+		PSYCH_PC_PSYCH_CLOCK_DRIFT,		/* MarketPsych */
 /* marker */
 		PSYCH_PC_MAX
 	};
@@ -78,10 +91,37 @@ namespace psych
 		}
 	};
 
+/* libcurl connection */	
+	class connection_t : boost::noncopyable
+	{
+	public:
+		connection_t (const resource_t& resource_, const std::string& url_) :
+			resource (resource_),
+			url (url_),
+			last_filetime (0L)
+		{
+		}
+
+		const resource_t& resource;
+		const std::string url;
+		ms::unique_handle<CURL*, onepass_traits> handle;	/* non-copyable */
+		char error[CURL_ERROR_SIZE];
+		std::string data;
+		boost::posix_time::ptime request_ptime;
+		boost::posix_time::ptime httpd_ptime;
+		long last_filetime;
+	};
+
 /* Basic state for each item stream. */
 	class broadcast_stream_t : public item_stream_t
 	{
 	public:
+		broadcast_stream_t (const resource_t& resource_) :
+			resource (resource_)
+		{
+		}
+
+		const resource_t& resource;
 	};
 
 	struct flex_filter_t
@@ -142,10 +182,24 @@ namespace psych
 /* Run core event loop. */
 		void mainLoop();
 
-		int tclPsychQuery (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		bool get_next_interval (FILETIME* ft);
+
+		enum {
+			QUERY_HTTP_KEEPALIVE = 1,
+			QUERY_IF_MODIFIED_SINCE
+		};
+		int tclPsychRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int tclPsychHardRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		bool httpPsychQuery (std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t>& connections, int flags);
+
+/* Parse libcurl driven HTTP response. */
+		bool processHttpResponse (connection_t* connection, boost::posix_time::ptime* open_time, boost::posix_time::ptime* close_time, std::vector<std::string>* columns, std::vector<std::pair<std::string, std::vector<double>>>* rows);
 
 /* Broadcast out message. */
-		bool sendRefresh() throw (rfa::common::InvalidUsageException);
+		bool sendRefresh (const resource_t& resource, const boost::posix_time::ptime& open_time, const boost::posix_time::ptime& close_time, const std::vector<std::string>& columns, const std::vector<std::pair<std::string, std::vector<double>>>& rows) throw (rfa::common::InvalidUsageException);
+
+/* Generate DACS lock from entity code list */
+		bool generatePELock (rfa::common::Buffer* buf, const rfa::common::RFA_Vector<unsigned long>& peList);
 
 /* Unique instance number per process. */
 		LONG instance_;
@@ -191,7 +245,8 @@ namespace psych
 		std::shared_ptr<provider_t> provider_;
 
 /* Publish instruments. */
-		std::vector<std::shared_ptr<broadcast_stream_t>> stream_vector_;
+		std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t> connections_;
+		std::map<resource_t, std::map<std::string, std::shared_ptr<broadcast_stream_t>>, resource_compare_t> stream_vector_;
 		boost::shared_mutex query_mutex_;
 
 /* Event pump and thread. */
@@ -207,9 +262,13 @@ namespace psych
 /* libcurl thread safety */
 		static LONG volatile curl_ref_count_;
 
+/* Threadpool timer. */
+		ms::timer timer_;
+
 /** Performance Counters. **/
 		boost::posix_time::ptime last_activity_;
 		boost::posix_time::time_duration min_tcl_time_, max_tcl_time_, total_tcl_time_;
+		boost::posix_time::time_duration min_refresh_time_, max_refresh_time_, total_refresh_time_;
 
 		uint32_t cumulative_stats_[PSYCH_PC_MAX];
 		uint32_t snap_stats_[PSYCH_PC_MAX];

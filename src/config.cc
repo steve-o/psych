@@ -79,6 +79,37 @@ psych::config_t::validate()
 		LOG(ERROR) << "Undefined vendor name.";
 		return false;
 	}
+
+/* Maximum response size must be provided for buffer allocation. */
+	if (maximum_response_size.empty()) {
+		LOG(ERROR) << "Undefined maximum response size.";
+		return false;
+	}
+	long value = std::atol (maximum_response_size.c_str());
+	if (value <= 0) {
+		LOG(ERROR) << "Invalid maximum response size \"" << maximum_response_size << "\".";
+		return false;
+	}
+
+/* "resources" */
+	for (auto it = resources.begin(); it != resources.end(); ++it) {
+		if (it->name.empty()) {
+			LOG(ERROR) << "Undefined resource name.";
+			return false;
+		}
+		if (it->path.empty()) {
+			LOG(ERROR) << "Undefined " << it->name << " feed path.";
+			return false;
+		}
+		if (it->fields.empty()) {
+			LOG(ERROR) << "Undefined " << it->name << " column FID mapping.";
+			return false;
+		}
+		if (it->items.empty()) {
+			LOG(ERROR) << "Undefined " << it->name << " sector: RIC and topic mapping.";
+			return false;
+		}
+	}
 	return true;
 }
 
@@ -232,6 +263,17 @@ psych::config_t::parseRfaNode (
 	}
 	if (0 == nodeList->getLength())
 		LOG(WARNING) << "No <service> nodes found in configuration.";
+/* <DACS> */
+	nodeList = elem->getElementsByTagName (L"DACS");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseDacsNode (nodeList->item (i))) {
+			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
+			LOG(ERROR) << "Failed parsing <DACS> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
+			return false;
+		}
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <DACS> nodes found in configuration.";
 /* <session> */
 	nodeList = elem->getElementsByTagName (L"session");
 	for (int i = 0; i < nodeList->getLength(); i++) {
@@ -292,6 +334,22 @@ psych::config_t::parseServiceNode (
 	return true;
 }
 
+bool
+psych::config_t::parseDacsNode (
+	const DOMNode*		node
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+	std::string attr;
+
+/* id="numeric value" */
+	attr = xml.transcode (elem->getAttribute (L"id"));
+	if (!attr.empty())
+		dacs_id = attr;
+	LOG_IF(WARNING, dacs_id.empty()) << "Undefined DACS service ID.";
+	return true;
+}
 bool
 psych::config_t::parseSessionNode (
 	const DOMNode*		node
@@ -491,9 +549,264 @@ psych::config_t::parsePsychNode (
 	const DOMNodeList* nodeList;
 	std::string attr;
 
+/* interval="seconds" */
+	attr = xml.transcode (elem->getAttribute (L"interval"));
+	if (!attr.empty())
+		interval = attr;
+/* tolerableDelay="milliseconds" */
+	attr = xml.transcode (elem->getAttribute (L"tolerableDelay"));
+	if (!attr.empty())
+		tolerable_delay = attr;
+/* retryCount="count" */
+	attr = xml.transcode (elem->getAttribute (L"retryCount"));
+	if (!attr.empty())
+		retry_count = attr;
+/* retryDelayMs="milliseconds" */
+	attr = xml.transcode (elem->getAttribute (L"retryDelayMs"));
+	if (!attr.empty())
+		retry_delay_ms = attr;
+/* retryTimeoutMs="milliseconds" */
+	attr = xml.transcode (elem->getAttribute (L"retryTimeoutMs"));
+	if (!attr.empty())
+		retry_timeout_ms = attr;
+/* timeoutMs="milliseconds" */
+	attr = xml.transcode (elem->getAttribute (L"timeoutMs"));
+	if (!attr.empty())
+		timeout_ms = attr;
+/* connectTimeoutMs="milliseconds" */
+	attr = xml.transcode (elem->getAttribute (L"connectTimeoutMs"));
+	if (!attr.empty())
+		connect_timeout_ms = attr;
+/* enableHttpPipelining="boolean" */
+	attr = xml.transcode (elem->getAttribute (L"enableHttpPipelining"));
+	if (!attr.empty())
+		enable_http_pipelining = attr;
+/* maximumResponseSize="bytes" */
+	attr = xml.transcode (elem->getAttribute (L"maximumResponseSize"));
+	if (!attr.empty())
+		maximum_response_size = attr;
+/* minimumResponseSize="bytes" */
+	attr = xml.transcode (elem->getAttribute (L"minimumResponseSize"));
+	if (!attr.empty())
+		minimum_response_size = attr;
+/* requestHttpEncoding="encoding" */
+	attr = xml.transcode (elem->getAttribute (L"requestHttpEncoding"));
+	if (!attr.empty())
+		request_http_encoding = attr;
+/* timeOffsetConstant="time duration" */
+	attr = xml.transcode (elem->getAttribute (L"timeOffsetConstant"));
+	if (!attr.empty())
+		time_offset_constant = attr;
+/* panicThreshold="seconds" */
+	attr = xml.transcode (elem->getAttribute (L"panicThreshold"));
+	if (!attr.empty())
+		panic_threshold = attr;
+/* httpProxy="proxy" */
+	attr = xml.transcode (elem->getAttribute (L"httpProxy"));
+	if (!attr.empty())
+		http_proxy = attr;
+/* dnsCacheTimeout="seconds" */
+	attr = xml.transcode (elem->getAttribute (L"dnsCacheTimeout"));
+	if (!attr.empty())
+		dns_cache_timeout = attr;
+/* href="url" */
+	attr = xml.transcode (elem->getAttribute (L"href"));
+	if (!attr.empty())
+		base_url = attr;
+
+/* reset all lists */
+	for (auto it = resources.begin(); it != resources.end(); ++it)
+		it->fields.clear(), it->items.clear();
+/* <resource> */
+	nodeList = elem->getElementsByTagName (L"resource");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		if (!parseResourceNode (nodeList->item (i))) {
+			LOG(ERROR) << "Failed parsing <resource> nth-node #" << (1 + i) << ".";
+			return false;
+		}
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <resource> nodes found.";
 	return true;
 }
 
+bool
+psych::config_t::parseResourceNode (
+	const DOMNode*		node
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+	const DOMNodeList* nodeList;
+
+	if (!elem->hasAttributes()) {
+		LOG(ERROR) << "No attributes found, a \"name\" attribute is required.";
+		return false;
+	}
+/* name="name" */
+	std::string name (xml.transcode (elem->getAttribute (L"name")));
+	if (name.empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute.";
+		return false;
+	}
+
+/* <field> */
+	std::map<std::string, int> fields;
+	nodeList = elem->getElementsByTagName (L"field");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		std::string field_name;
+		int field_id;
+		if (!parseFieldNode (nodeList->item (i), &field_name, &field_id)) {
+			LOG(ERROR) << "Failed parsing <field> nth-node #" << (1 + i) << ".";
+			return false;
+		}
+		fields.emplace (std::make_pair (field_name, field_id));
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <field> nodes found.";
+/* <item> */
+	std::map<std::string, std::pair<std::string, std::string>> items;
+	nodeList = elem->getElementsByTagName (L"item");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		std::string item_name, item_topic, item_src;
+		if (!parseItemNode (nodeList->item (i), &item_name, &item_topic, &item_src)) {
+			LOG(ERROR) << "Failed parsing <item> nth-node #" << (1 + i) << ".";
+			return false;
+		}
+		items.emplace (std::make_pair (item_src, std::make_pair (item_name, item_topic)));
+	}
+	if (0 == nodeList->getLength())
+		LOG(WARNING) << "No <item> nodes found.";
+
+/* <link> */
+	nodeList = elem->getElementsByTagName (L"link");
+	for (int i = 0; i < nodeList->getLength(); i++) {
+		std::string link_rel, link_href;
+		unsigned long link_id;
+		if (!parseLinkNode (nodeList->item (i), &link_rel, &link_id, &link_href)) {
+			LOG(ERROR) << "Failed parsing <link> nth-node #" << (1 + i) << ".";
+			return false;
+		}
+		resources.emplace_back (std::vector<resource_t>::value_type (name, link_href, link_id, fields, items));
+	}
+	if (0 == nodeList->getLength()) {
+		LOG(WARNING) << "No <link> nodes found.";
+		return true;
+	}
+	return true;
+}
+
+/* parse <link rel="resource" id="entitlement code" href="URL"/>
+ */
+
+bool
+psych::config_t::parseLinkNode (
+	const DOMNode*		node,
+	std::string*		rel,
+	unsigned long*		id,
+	std::string*		href
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+
+	if (!elem->hasAttributes()) {
+		LOG(ERROR) << "No attributes found, \"rel\" and \"href\" attributes are required.";
+		return false;
+	}
+/* rel="resource" */
+	*rel = xml.transcode (elem->getAttribute (L"rel"));
+	if (rel->empty()) {
+		LOG(ERROR) << "Undefined \"rel\" attribute, value cannot be empty.";
+		return false;
+	}
+/* href="URL" */
+	*href = xml.transcode (elem->getAttribute (L"href"));
+	if (href->empty()) {
+		LOG(ERROR) << "Undefined \"href\" attribute, value cannot be empty.";
+		return false;
+	}
+/* id="integer" */
+	const std::string id_text = xml.transcode (elem->getAttribute (L"id"));
+	if (!id_text.empty())
+		*id = std::strtoul (id_text.c_str(), nullptr, 10);
+	else
+		*id = 0;
+	return true;
+}
+
+/* parse <field name="name" id="id"/>
+ */
+
+bool
+psych::config_t::parseFieldNode (
+	const DOMNode*		node,
+	std::string*		name,
+	int*			id
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+
+	if (!elem->hasAttributes()) {
+		LOG(ERROR) << "No attributes found, \"name\" and \"id\" attributes are required.";
+		return false;
+	}
+/* name="text" */
+	*name = xml.transcode (elem->getAttribute (L"name"));
+	if (name->empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
+		return false;
+	}
+/* id="integer" */
+	const std::string id_text = xml.transcode (elem->getAttribute (L"id"));
+	if (id_text.empty()) {
+		LOG(ERROR) << "Undefined \"id\" attribute, value cannot be empty.";
+		return false;
+	}
+
+	*id = std::stoi (id_text);
+	return true;
+}
+
+/* parse <item name="name" topic="topic" src="text"/>
+ */
+
+bool
+psych::config_t::parseItemNode (
+	const DOMNode*		node,
+	std::string*		name,
+	std::string*		topic,
+	std::string*		src
+	)
+{
+	const DOMElement* elem = static_cast<const DOMElement*>(node);
+	vpf::XMLStringPool xml;
+
+	if (!elem->hasAttributes()) {
+		LOG(ERROR) << "No attributes found, \"name\", \"topic\", and \"src\" attributes are required.";
+		return false;
+	}
+/* name="text" */
+	*name = xml.transcode (elem->getAttribute (L"name"));
+	if (name->empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
+		return false;
+	}
+/* topic="text" */
+	*topic = xml.transcode (elem->getAttribute (L"topic"));
+	if (topic->empty()) {
+		LOG(ERROR) << "Undefined \"topic\" attribute, value cannot be empty.";
+		return false;
+	}
+/* src="text" */
+	*src = xml.transcode (elem->getAttribute (L"src"));
+	if (src->empty()) {
+		LOG(ERROR) << "Undefined \"src\" attribute, value cannot be empty.";
+		return false;
+	}
+	return true;
+}
 
 /* </psych> */
 /* </config> */

@@ -1,0 +1,879 @@
+----------------------------------------------------------------
+--
+-- MarketPsych Republisher MIB
+--
+----------------------------------------------------------------
+
+PSYCH-MIB DEFINITIONS ::= BEGIN
+
+-- IMPORTS: Include definitions from other mibs here, which is always
+-- the first item in a MIB file.
+IMPORTS
+        enterprises, OBJECT-TYPE, Counter32, MODULE-IDENTITY
+                FROM SNMPv2-SMI;
+
+--
+-- A brief description and update information about this mib.
+--
+psychMIB MODULE-IDENTITY
+	LAST-UPDATED "201205150000Z"
+	ORGANIZATION
+		"Thomson Reuters"
+	CONTACT-INFO
+		"Steven McCoy
+		steven.mccoy@thomsonreuters.com
+		+1 646-223-8624
+		Thomson Reuters
+		3 Times Square
+		New York, NY 10036
+		USA"
+	DESCRIPTION
+		"The MIB module for managing MarketPsych TREP-RT republisher."
+	REVISION "201205150000Z"
+	DESCRIPTION
+		"Version 0.2: Initial MIB."
+	::= { enterprises 67 }
+	
+
+-- Define typical mib nodes, like where the objects are going to lie.
+-- we'll prefix everything in this mib with psych
+psych OBJECT IDENTIFIER ::= { psychMIB 2 }
+psychPlugin OBJECT IDENTIFIER ::= { psych 1 }
+
+psychPluginNumberOfEntries OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MarketPsych plugin instances."
+	::= { psychPlugin 1 }
+
+-- Plugin Management Table
+
+psychPluginTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF psychPluginEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per plugin instance information."
+	::= { psychPlugin 2 }
+
+psychPluginEntry OBJECT-TYPE
+	SYNTAX     psychPluginEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per plugin instance information."
+	INDEX    { psychPluginId,
+	           psychPluginUniqueInstance }
+	::= { psychPluginTable 1 }
+
+psychPluginEntry ::= SEQUENCE {
+	psychPluginId
+		OCTET STRING,
+	psychPluginUniqueInstance
+		Unsigned32,
+	psychPluginWindowsRegistryKey
+		OCTET STRING,
+	psychPluginServiceName
+		OCTET STRING,
+	psychPluginDacsId
+		OCTET STRING,
+	psychPluginMonitorName 
+		OCTET STRING,
+	psychPluginEventQueueName 
+		OCTET STRING,
+	psychPluginVendorName 
+		OCTET STRING
+	}
+
+psychPluginId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Plugin identifier, as configured in xml tree."
+	::= { psychPluginEntry 1 }
+
+psychPluginUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { psychPluginEntry 2 }
+
+psychPluginWindowsRegistryKey OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Windows registry override key."
+	::= { psychPluginEntry 3 }
+
+psychPluginServiceName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT service name."
+	::= { psychPluginEntry 4 }
+
+psychPluginMonitorName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA application logger monitor name."
+	::= { psychPluginEntry 5 }
+
+psychPluginEventQueueName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA event queue name."
+	::= { psychPluginEntry 6 }
+
+psychPluginVendorName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA vendor name."
+	::= { psychPluginEntry 7 }
+
+-- Plugin Performance Management Table
+
+psychPluginPerformanceTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF psychPluginPerformanceEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per plugin instance performance information."
+	::= { psychPlugin 4 }
+
+psychPluginPerformanceEntry OBJECT-TYPE
+	SYNTAX     psychPluginPerformanceEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per plugin instance performance information."
+	INDEX    { psychPluginPerformanceId,
+	           psychPluginPerformanceUniqueInstance }
+	::= { psychPluginPerformanceTable 1 }
+
+psychPluginPerformanceEntry ::= SEQUENCE {
+	psychPluginPerformanceId
+		OCTET STRING,
+	psychPluginPerformanceUniqueId
+		Unsigned32,
+	psychTclQueryReceived
+		Counter32,
+	psychTimerQueryReceived
+		Counter32,
+	psychLastActivity
+		Counter32,
+	psychTclSvcTimeMin
+		Counter32,
+	psychTclSvcTimeMean
+		Counter32,
+	psychTclSvcTimeMax
+		Counter32,
+	psychTimerSvcTimeMin
+		Counter32,
+	psychTimerSvcTimeMean
+		Counter32,
+	psychTimerSvcTimeMax,
+		Counter32,
+	psychMsgsSent
+		Counter32,
+	psychLastMsgSent
+		Counter32,
+	psychHttpRequestSent
+		Counter32,
+	psychHttp1xxReceived
+		Counter32,
+	psychHttp2xxReceived
+		Counter32,
+	psychHttp3xxReceived
+		Counter32,
+	psychHttp4xxReceived
+		Counter32,
+	psychHttp5xxReceived
+		Counter32,
+	psychHttp200Received
+		Counter32,
+	psychHttp304Received
+		Counter32,
+	psychHttpMalformed
+		Counter32,
+	psychHttpRetriesExceeded
+		Counter32,
+	psychHttpdClockDrift
+		Counter32,
+	psychHttpClockDrift
+		Counter32,
+	psychPsychClockDrift
+		Counter32
+	}
+
+psychPluginPerformanceId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Plugin identifier, as configured in xml tree."
+	::= { psychPluginPerformanceEntry 1 }
+
+psychPluginPerformanceUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { psychPluginPerformanceEntry 2 }
+
+psychTclQueryReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Tcl queries received."
+	::= { psychPluginPerformanceEntry 3 }
+
+psychTimerQueryReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of timer based queries received."
+	::= { psychPluginPerformanceEntry 4 }
+
+psychLastActivity OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Last time activity was observed.  In seconds since the epoch, January 1, 1970."
+	::= { psychPluginPerformanceEntry 5 }
+
+psychTclSvcTimeMin OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The minimum time it took to resolve a Tcl query."
+	::= { psychPluginPerformanceEntry 6 }
+
+psychTclSvcTimeMean OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The mean time it took to resolve a Tcl query."
+	::= { psychPluginPerformanceEntry 7 }
+
+psychTclSvcTimeMax OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The maximum time it took to resolve a Tcl query."
+	::= { psychPluginPerformanceEntry 8 }
+
+psychTimerSvcTimeMin OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The minimum time it took to resolve a timer query."
+	::= { psychPluginPerformanceEntry 9 }
+
+psychTimerSvcTimeMean OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The mean time it took to resolve a timer query."
+	::= { psychPluginPerformanceEntry 10 }
+
+psychTimerSvcTimeMax OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "milliseconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"The maximum time it took to resolve a timer query."
+	::= { psychPluginPerformanceEntry 11 }
+
+psychMsgsSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of messages sent by this provider."
+	::= { psychPluginPerformanceEntry 12 }
+
+psychLastMsgSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Last time a RFA message was sent.  In seconds since the epoch, January 1, 1970."
+	::= { psychPluginPerformanceEntry 13 }
+
+psychHttpRequestSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP requests sent by this instance."
+	::= { psychPluginPerformanceEntry 14 }
+
+psychHttp1xxReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 1xx responses received by this instance."
+	::= { psychPluginPerformanceEntry 15 }
+
+psychHttp2xxReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 2xx responses received by this instance."
+	::= { psychPluginPerformanceEntry 16 }
+
+psychHttp3xxReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 3xx responses received by this instance."
+	::= { psychPluginPerformanceEntry 17 }
+
+psychHttp4xxReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 4xx responses received by this instance."
+	::= { psychPluginPerformanceEntry 18 }
+
+psychHttp5xxReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 5xx responses received by this instance."
+	::= { psychPluginPerformanceEntry 19 }
+
+psychHttp200Received OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 200: OK responses received by this instance."
+	::= { psychPluginPerformanceEntry 20 }
+
+psychHttp304Received OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP 304: Not Modified responses received by this instance."
+	::= { psychPluginPerformanceEntry 21 }
+
+psychHttpMalformed OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of HTTP responses ignored due to malformed content."
+	::= { psychPluginPerformanceEntry 22 }
+
+psychHttpRetriesExceeded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of aborted attempts to fetch a MarketPsych HTTP resource."
+	::= { psychPluginPerformanceEntry 23 }
+
+psychHttpdClockDrift OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Approximate time difference between host clock and remote HTTPD clock.  Does not factor latency, TCP connection overheads, HTTP pipelining or phase of the moon."
+	::= { psychPluginPerformanceEntry 24 }
+
+psychHttpClockDrift OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Approximate time difference between host clock and remote file system timestamps."
+	::= { psychPluginPerformanceEntry 25 }
+
+psychPsychClockDrift OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Approximate time difference between host clock and remote MarketPsych service."
+	::= { psychPluginPerformanceEntry 26 }
+
+-- Session Management Table
+
+psychSessionTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF psychSessionEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per session instance information."
+	::= { psychPlugin 5 }
+
+psychSessionEntry OBJECT-TYPE
+	SYNTAX     psychSessionEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per sessioninstance information."
+	INDEX    { psychSessionPluginId,
+	           psychSessionPluginUniqueInstance,
+		   psychSessionUniqueInstance }
+	::= { psychSessionTable 1 }
+
+psychSessionEntry ::= SEQUENCE {
+	psychSessionPluginId
+		OCTET STRING,
+	psychSessionPluginUniqueInstance
+		Unsigned32,
+	psychSessionUniqueInstance
+		Unsigned32,
+	psychPluginRsslServers
+		OCTET STRING,
+	psychPluginRsslDefaultPort
+		OCTET STRING,
+	psychPluginApplicationId
+		OCTET STRING,
+	psychPluginInstanceId 
+		OCTET STRING,
+	psychPluginUserName 
+		OCTET STRING,
+	psychPluginPosition 
+		OCTET STRING,
+	psychPluginSessionName 
+		OCTET STRING,
+	psychPluginConnectionName 
+		OCTET STRING,
+	psychPluginPublisherName 
+		OCTET STRING,
+	}
+
+psychSessionPluginId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Plugin identifier, as configured in xml tree."
+	::= { psychSessionEntry 1 }
+
+psychSessionPluginUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { psychSessionEntry 2 }
+
+psychSessionUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this session."
+	::= { psychSessionEntry 3 }
+
+psychSessionRsslServers OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"List of RSSL servers by IP address or hostname, can include port."
+	::= { psychSessionEntry 4 }
+
+psychSessionRsslDefaultPort OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Default RSSL IP port."
+	::= { psychSessionEntry 5 }
+
+psychSessionApplicationId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT application identifier for DACS permissioning."
+	::= { psychSessionEntry 6 }
+
+psychSessionInstanceId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT instance identifier."
+	::= { psychSessionEntry 7 }
+
+psychSessionUserName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT user name for DACS permissioning."
+	::= { psychSessionEntry 8 }
+
+psychSessionPosition OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"TREP-RT position declaration for DACS permissioning."
+	::= { psychSessionEntry 9 }
+
+psychSessionSessionName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA session name."
+	::= { psychSessionEntry 10 }
+
+psychSessionConnectionName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA connection name."
+	::= { psychSessionEntry 11 }
+
+psychSessionPublisherName OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"RFA publisher name."
+	::= { psychSessionEntry 12 }
+
+-- Session Performance Management Table
+
+psychSessionPerformanceTable OBJECT-TYPE
+	SYNTAX SEQUENCE OF psychSessionPerformanceEntry
+	MAX-ACCESS not-accessible
+        STATUS     current
+	DESCRIPTION
+		"The table holding per session instance performance information."
+	::= { psychPlugin 6 }
+
+psychSessionPerformanceEntry OBJECT-TYPE
+	SYNTAX     psychSessionPerformanceEntry
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Per session instance performance information."
+	INDEX    { psychSessionPerformanceId,
+		   psychSessionPerformancePluginUniqueInstance,
+	           psychSessionPerformanceUniqueInstance }
+	::= { psychSessionPerformanceTable 1 }
+
+psychSessionPerformanceEntry ::= SEQUENCE {
+	psychSessionPerformanceId
+		OCTET STRING,
+	psychSessionPerformancePluginUniqueInstance
+		Unsigned32,
+	psychSessionPerformanceUniqueInstance
+		Unsigned32,
+	psychSessionLastActivity
+		Counter32,
+	psychSessionRfaMsgsSent
+		Counter32,
+	psychRfaEventsReceived
+		Counter32,
+	psychRfaEventsDiscarded
+		Counter32,
+	psychOmmItemEventsReceived
+		Counter32,
+	psychOmmItemEventsDiscarded
+		Counter32,
+	psychResponseMsgsReceived
+		Counter32,
+	psychResponseMsgsDiscarded
+		COunter32,
+	psychMmtLoginResponseReceived
+		Counter32,
+	psychMmtLoginResponseDiscarded
+		Counter32,
+	psychMmtLoginSuccessReceived
+		Counter32,
+	psychMmtLoginSuspectReceived
+		Counter32,
+	psychMmtLoginClosedReceived
+		Counter32,
+	psychOmmCmdErrorsDiscarded
+		Counter32,
+	psychMmtLoginsValidated
+		Counter32,
+	psychMmtLoginsMalformed
+		Counter32,
+	psychMmtLoginsSent
+		Counter32,
+	psychMmtDirectorysValidated
+		Counter32,
+	psychMmtDirectorysMalformed
+		Counter32,
+	psychMmtDirectorysSent
+		Counter32,
+	psychTokensGenerated
+		Counter32,
+	psychMmtLoginStreamState
+		INTEGER,
+	psychMmtLoginDataState
+		INTEGER
+	}
+
+psychSessionPerformanceId OBJECT-TYPE
+	SYNTAX     OCTET STRING (SIZE (1..255))
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Plugin identifier, as configured in xml tree."
+	::= { psychSessionPerformanceEntry 1 }
+
+psychSessionPerformancePluginUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this plugin."
+	::= { psychSessionPerformanceEntry 2 }
+
+psychSessionPerformanceUniqueInstance OBJECT-TYPE
+	SYNTAX     Unsigned32
+	MAX-ACCESS not-accessible
+	STATUS     current
+	DESCRIPTION
+		"Unique instance identifier for this session."
+	::= { psychSessionPerformanceEntry 3 }
+
+psychSessionLastActivity OBJECT-TYPE
+	SYNTAX     Counter32
+	UNITS      "seconds"
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Last time activity was observed.  In seconds since the epoch, January 1, 1970."
+	::= { psychSessionPerformanceEntry 4 }
+
+psychSessionRfaMsgsSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA messages sent by this provider."
+	::= { psychSessionPerformanceEntry 5 }
+
+psychRfaEventsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA events received by this provider."
+	::= { psychSessionPerformanceEntry 6 }
+
+psychRfaEventsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of RFA events discarded by this provider."
+	::= { psychSessionPerformanceEntry 7 }
+
+psychOmmItemEventsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM Item events received by this provider."
+	::= { psychSessionPerformanceEntry 8 }
+
+psychOmmItemEventsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM Item events discarded by this provider."
+	::= { psychSessionPerformanceEntry 9 }
+
+psychResponseMsgsReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Response messages received by this provider."
+	::= { psychSessionPerformanceEntry 10 }
+
+psychResponseMsgsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of Response messages discarded by this provider."
+	::= { psychSessionPerformanceEntry 11 }
+
+psychMmtLoginResponseReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN responses received by this provider."
+	::= { psychSessionPerformanceEntry 12 }
+
+psychMmtLoginResponseDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN responses discarded by this provider."
+	::= { psychSessionPerformanceEntry 13 }
+
+psychMmtLoginSuccessReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN success responses received by this provider."
+	::= { psychSessionPerformanceEntry 14 }
+
+psychMmtLoginSuspectReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN suspect responses received by this provider."
+	::= { psychSessionPerformanceEntry 15 }
+
+psychMmtLoginClosedReceived OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN closed responses received by this provider."
+	::= { psychSessionPerformanceEntry 16 }
+
+psychOmmCmdErrorsDiscarded OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of OMM command errors by this provider."
+	::= { psychSessionPerformanceEntry 17 }
+
+psychMmtLoginsValidated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests validated by this provider."
+	::= { psychSessionPerformanceEntry 18 }
+
+psychMmtLoginsMalformed OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests malformed by this provider."
+	::= { psychSessionPerformanceEntry 19 }
+
+psychMmtLoginsSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_LOGIN requests sent by this provider."
+	::= { psychSessionPerformanceEntry 20 }
+
+psychMmtDirectorysValidated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses validated by this provider."
+	::= { psychSessionPerformanceEntry 21 }
+
+psychMmtDirectorysMalformed OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses malformed by this provider."
+	::= { psychSessionPerformanceEntry 22 }
+
+psychMmtDirectorysSent OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of MMT_DIRECTORY responses sent by this provider."
+	::= { psychSessionPerformanceEntry 23 }
+
+psychTokensGenerated OBJECT-TYPE
+	SYNTAX     Counter32
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Number of item tokens generated by this provider."
+	::= { psychSessionPerformanceEntry 24 }
+
+psychMmtLoginStreamState OBJECT-TYPE
+	SYNTAX     INTEGER {
+			Unspecified (0),
+			Open (1),
+			NonStreaming (2),
+			ClosedRecover (3),
+			Closed (4),
+			Redirected (5)
+		   }
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Flag to indicate provider MMT_LOGIN stream state."
+	::= { psychSessionPerformanceEntry 25 }
+
+psychMmtLoginDataState OBJECT-TYPE
+	SYNTAX     INTEGER {
+			Unspecified (0),
+			Ok (1),
+			Suspect (2)
+		   }
+	MAX-ACCESS read-only
+	STATUS     current
+	DESCRIPTION
+		"Flag to indicate provider MMT_LOGIN data state."
+	::= { psychSessionPerformanceEntry 26 }
+
+END
