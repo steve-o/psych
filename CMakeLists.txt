@@ -151,12 +151,14 @@ set(cxx-sources
 	src/chromium/debug/stack_trace_win.cc
 	src/chromium/memory/singleton.cc
 	src/chromium/logging.cc
+	src/chromium/logging_win.cc
 	src/chromium/string_piece.cc
 	src/chromium/string_split.cc
 	src/chromium/string_util.cc
 	src/chromium/synchronization/lock.cc
 	src/chromium/synchronization/lock_impl_win.cc
 	src/chromium/vlog.cc
+	src/chromium/win/event_trace_provider.cc
 	${CMAKE_BINARY_DIR}/version.cc
 )
 

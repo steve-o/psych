@@ -1,0 +1,58 @@
+!ACRONYM    DDE ACRONYM          FID  RIPPLES TO  FIELD TYPE     LENGTH  RWF TYPE   RWF LEN
+!-------    -----------          ---  ----------  ----------     ------  --------   -------
+!
+STOCK_RIC  "STOCK RIC"           1026  NULL        ALPHANUMERIC       14  ASCII_STRING    14
+!
+! The RIC of the underlying instrument for an option.
+!
+SF_NAME    "SOURCE FEED NME"     1686  NULL        ALPHANUMERIC        6  RMTES_STRING     6
+!
+! Source feed name.
+!
+TIMESTAMP  "TIMESTAMP"           6378  NULL        ALPHANUMERIC       24  RMTES_STRING    24
+!
+! Timestamp (GMT) of the item used in calculations in iso8601 format: YYYY-MM-DD 
+! hh:mm:ss.sss
+!
+
+MP_BUZZ    ""                       6  NULL        PRICE              17  REAL64           7
+MP_SNTMENT ""                       7  NULL        PRICE              17  REAL64           7
+MP_OPTIMSM ""                       8  NULL        PRICE              17  REAL64           7
+MP_GLOOM   ""                       9  NULL        PRICE              17  REAL64           7
+MP_FEAR    ""                      10  NULL        PRICE              17  REAL64           7
+MP_JOY     ""                      11  NULL        PRICE              17  REAL64           7
+MP_ANGER   ""                      12  NULL        PRICE              17  REAL64           7
+MP_INNOVAT ""                      13  NULL        PRICE              17  REAL64           7
+MP_TRUST   ""                      19  NULL        PRICE              17  REAL64           7
+MP_VIOLENC ""                      21  NULL        PRICE              17  REAL64           7
+MP_CONFLCT ""                      22  NULL        PRICE              17  REAL64           7
+MP_STRESS  ""                      23  NULL        PRICE              17  REAL64           7
+MP_URGENCY ""                      24  NULL        PRICE              17  REAL64           7
+MP_EC_UNCR ""                      25  NULL        PRICE              17  REAL64           7
+MP_FUNDSTR ""                      26  NULL        PRICE              17  REAL64           7
+MP_MKTRISK ""                      27  NULL        PRICE              17  REAL64           7
+MP_EARNEXP ""                      34  NULL        PRICE              17  REAL64           7
+MP_LAYOFFS ""                      35  NULL        PRICE              17  REAL64           7
+MP_LITIG   ""                      36  NULL        PRICE              17  REAL64           7
+MP_UPGDWNG ""                      47  NULL        PRICE              17  REAL64           7
+MP_MRGBUZZ ""                      48  NULL        PRICE              17  REAL64           7
+MP_VOLATIL ""                      50  NULL        PRICE              17  REAL64           7
+MP_MKTFCST ""                      51  NULL        PRICE              17  REAL64           7
+MP_CYTRDBZ ""                      53  NULL        PRICE              17  REAL64           7
+MP_PEGSTAB ""                      54  NULL        PRICE              17  REAL64           7
+MP_MKTMMTM ""                      56  NULL        PRICE              17  REAL64           7
+MP_PRICEUP ""                      57  NULL        PRICE              17  REAL64           7
+MP_SRPSHRT ""                      58  NULL        PRICE              17  REAL64           7
+MP_DISEASE ""                      59  NULL        PRICE              17  REAL64           7
+MP_WTHRDMG ""                      60  NULL        PRICE              17  REAL64           7
+MP_REGISSU ""                      61  NULL        PRICE              17  REAL64           7
+MP_PRODVOL ""                      62  NULL        PRICE              17  REAL64           7
+MP_SSDYCHG ""                      63  NULL        PRICE              17  REAL64           7
+MP_SSDYSEN ""                      64  NULL        PRICE              17  REAL64           7
+MP_SDFCST  ""                      65  NULL        PRICE              17  REAL64           7
+MP_ACRECLT ""                      66  NULL        PRICE              17  REAL64           7
+MP_CNSMVOL ""                      67  NULL        PRICE              17  REAL64           7
+MP_INFLATN ""                      68  NULL        PRICE              17  REAL64           7
+MP_SAFEACC ""                      69  NULL        PRICE              17  REAL64           7
+MP_NWEXPLR ""                      70  NULL        PRICE              17  REAL64           7
+MP_PRDCOST ""                      72  NULL        PRICE              17  REAL64           7

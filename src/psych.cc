@@ -353,7 +353,7 @@ psych::psych_t::init (
 			goto cleanup;
 
 /* RFA logging. */
-		log_.reset (new logging::LogEventProvider (config_, event_queue_));
+		log_.reset (new logging::rfa::LogEventProvider (config_, event_queue_));
 		if (!(bool)log_ || !log_->Register())
 			goto cleanup;
 
@@ -373,7 +373,7 @@ psych::psych_t::init (
 			connections_.emplace (std::make_pair (*it, connection));
 
 /* create stream per "name" */
-			std::map<std::string, std::shared_ptr<broadcast_stream_t>> name_map;
+			std::map<std::string, std::pair<std::string, std::shared_ptr<broadcast_stream_t>>> name_map;
 			for (auto jt = it->items.begin();
 				it->items.end() != jt;
 				++jt)
@@ -382,7 +382,7 @@ psych::psych_t::init (
 				assert ((bool)stream);
 				if (!provider_->createItemStream (jt->second.first.c_str(), stream))
 					goto cleanup;
-				name_map.emplace (std::make_pair (jt->first, stream));
+				name_map.emplace (std::make_pair (jt->first, std::make_pair (jt->second.second, stream)));
 			}
 			stream_vector_.emplace (std::make_pair (*it, name_map));
 		}
@@ -633,12 +633,14 @@ psych::psych_t::tclPsychRepublish (
 	std::for_each (connections_.begin(), connections_.end(),
 		[&connections](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
 	{
-		auto connection = std::make_shared<connection_t> (pair.first, pair.second->url);
-		connections.emplace (std::make_pair (pair.first, connection));
+		auto dup_connection = std::make_shared<connection_t> (pair.first, pair.second->url);
+		connections.emplace (std::make_pair (pair.first, dup_connection));
 	});
 
 	httpPsychQuery (connections, QUERY_HTTP_KEEPALIVE);
 	DVLOG(3) << "query complete.";
+
+	connections.clear();
 
 	return TCL_OK;
 }
@@ -664,8 +666,8 @@ psych::psych_t::tclPsychHardRepublish (
 	std::for_each (connections_.begin(), connections_.end(),
 		[&connections](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
 	{
-		auto connection = std::make_shared<connection_t> (pair.first, pair.second->url);
-		connections.emplace (std::make_pair (pair.first, connection));
+		auto dup_connection = std::make_shared<connection_t> (pair.first, pair.second->url);
+		connections.emplace (std::make_pair (pair.first, dup_connection));
 	});
 
 	httpPsychQuery (connections, 0);
@@ -814,8 +816,8 @@ psych::psych_t::httpPsychQuery (
 	VLOG(1) << "curl start:";
 /* retries are handled on a carousel basis, one round tries every connection queued. */
 	std::vector<std::shared_ptr<connection_t>> pending;
-	pending.reserve (connections_.size());
-	std::for_each (connections_.begin(), connections_.end(),
+	pending.reserve (connections.size());
+	std::for_each (connections.begin(), connections.end(),
 		[&pending](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
 	{
 		pending.emplace_back (pair.second);
@@ -1108,7 +1110,7 @@ psych::psych_t::httpPsychQuery (
 	}
 
 	VLOG(2) << "curl cleanup.";
-	std::for_each (connections_.begin(), connections_.end(),
+	std::for_each (connections.begin(), connections.end(),
 		[](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
 	{
 		pair.second->handle.reset();
@@ -1390,10 +1392,15 @@ psych::psych_t::sendRefresh (
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
 	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry timestamp_field (false), price_field (false);
-	rfa::data::DataBuffer timestamp_data (false), price_data (false);
+	rfa::data::FieldEntry stock_ric_field (false), timestamp_field (false), price_field (false);
+	rfa::data::DataBuffer stock_ric_data (false), timestamp_data (false), price_data (false);
 	rfa::data::Real64 real64;
 	struct tm _tm;
+
+/* STOCK_RIC
+ */
+	stock_ric_field.setFieldID (kRdmStockRicId);
+	stock_ric_field.setData (stock_ric_data);
 
 /* TIMESTAMP: ISO 8601 format, UTC: YYYY-MM-DD hh:mm:ss.sss
  */
@@ -1443,12 +1450,16 @@ psych::psych_t::sendRefresh (
 			VLOG(3) << "Unmapped row \"" << row.first << "\".";
 			return;
 		}
-		auto& stream = jt->second;
+		auto& stream = jt->second.second;
 
 		VLOG(2) << "Publishing to stream " << stream->rfa_name;
 
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
+/* STOCK_RIC */
+		const RFA_String rfa_string (jt->second.first.c_str(), 0, false);
+		stock_ric_data.setFromString (rfa_string, rfa::data::DataBuffer::StringAsciiEnum);
+		it.bind (stock_ric_field);
 /* TIMESTAMP */
 		it.bind (timestamp_field);
 
@@ -1472,14 +1483,17 @@ psych::psych_t::sendRefresh (
 		it.complete();
 		response.setPayload (fields_);
 
-/* Add "DACS lock", i.e. permissioning data to item stream. */
+/* Add "DACS lock", i.e. permissioning data to item stream.
+ * Message manifest & buffer are not copied and must survive scope till delivery.
+ */
+		rfa::common::Buffer buf;
+		auto manifest (response.getManifest());
 		if (!config_.dacs_id.empty()) {
 			rfa::common::RFA_Vector<unsigned long> peList (1);
 			peList.push_back (resource.entitlement_code);
-			rfa::common::Buffer buf;
 			if (generatePELock (&buf, peList)) {
-				auto manifest (response.getManifest());
 				manifest.setPermissionData (buf);
+				response.setManifest (manifest);
 			}
 		}
 

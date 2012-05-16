@@ -4,17 +4,52 @@
 /* VA leaks a dependency upon _MAX_PATH */
 #include <cstdlib>
 
+/* Boost string algorithms */
+#include <boost/algorithm/string.hpp>
+
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+#include <initguid.h>
+
 #include "chromium/command_line.hh"
 #include "chromium/logging.hh"
+#include "chromium/logging_win.hh"
 #include "psych.hh"
 
 static const char* kPluginType = "psychPlugin";
 
+// {A86E8172-4520-4043-B509-AF75C35326D3}
+DEFINE_GUID(kLogProvider, 
+0xa86e8172, 0x4520, 0x4043, 0xb5, 0x9, 0xaf, 0x75, 0xc3, 0x53, 0x26, 0xd3);
+
 namespace
 {
+/* Vhayu log system wrapper */
+	static
+	bool
+	log_handler (
+		int			severity,
+		const char*		file,
+		int			line,
+		size_t			message_start,
+		const std::string&	str
+		)
+	{
+		int priority;
+		switch (severity) {
+		default:
+		case logging::LOG_INFO:		priority = eMsgInfo; break;
+		case logging::LOG_WARNING:	priority = eMsgLow; break;
+		case logging::LOG_ERROR:	priority = eMsgMedium; break;
+		case logging::LOG_FATAL:	priority = eMsgFatal; break;
+		}
+/* Yay, broken APIs */
+		std::string str1 (boost::algorithm::trim_right_copy (str));
+		MsgLog (priority, 0, (char*)str1.c_str());
+		return true;
+	}
+
 	class env_t
 	{
 	public:
@@ -36,17 +71,22 @@ namespace
 /* update command line */
 			CommandLine::ForCurrentProcess()->ParseFromString (command_line);
 /* forward onto logging */
+#if 0
 			logging::InitLogging(
 				"/psych.log",
-#if 0
+#	if 0
 				logging::LOG_ONLY_TO_FILE,
-#else
-				logging::LOG_ONLY_TO_VHAYU_LOG,
-#endif
+#	else
+				logging::LOG_NONE,
+#	endif
 				logging::DONT_LOCK_LOG_FILE,
 				logging::APPEND_TO_OLD_LOG_FILE,
 				logging::ENABLE_DCHECK_FOR_NON_OFFICIAL_RELEASE_BUILDS
 				);
+			logging::SetLogMessageHandler (log_handler);
+#else
+			logging::LogEventProvider::Initialize(kLogProvider);
+#endif
 		}
 	};
 

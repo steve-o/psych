@@ -86,7 +86,7 @@ namespace psych
 /* column name to FID mapping */
 		std::map<std::string, int> fields;
 
-/* sector to RIC, topic mapping */
+/* sector to (RIC, topic) mapping */
 		std::map<std::string, std::pair<std::string, std::string>> items;
 	};
 	

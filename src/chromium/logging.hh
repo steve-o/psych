@@ -91,8 +91,8 @@ namespace logging {
 // Where to record logging output? A flat file and/or Vhayu log via MsgLog.
 enum LoggingDestination { LOG_NONE,
                           LOG_ONLY_TO_FILE,
-                          LOG_ONLY_TO_VHAYU_LOG,
-                          LOG_TO_BOTH_FILE_AND_VHAYU_LOG };
+                          LOG_ONLY_TO_SYSTEM_DEBUG_LOG,
+                          LOG_TO_BOTH_FILE_AND_SYSTEM_DEBUG_LOG };
 
 // Indicates that the log file should be locked when being written to.
 // Often, there is no locking, which is fine for a single threaded program.
@@ -161,6 +161,22 @@ inline bool InitLogging(const char* log_file,
 	int GetVlogLevel (const char (&file)[N]) {
 		return GetVlogLevelHelper (file, N);
 	}
+
+// Sets the common items you want to be prepended to each log message.
+// process and thread IDs default to off, the timestamp defaults to on.
+// If this function is not called, logging defaults to writing the timestamp
+// only.
+	void SetLogItems(bool enable_process_id, bool enable_thread_id,
+                             bool enable_timestamp, bool enable_tickcount);
+
+// Sets the Log Message Handler that gets passed every log message before
+// it's sent to other log destinations (if any).
+// Returns true to signal that it handled the message and the message
+// should not be sent to other log destinations.
+	typedef bool (*LogMessageHandlerFunction)(int severity,
+		const char* file, int line, size_t message_start, const std::string& str);
+	void SetLogMessageHandler(LogMessageHandlerFunction handler);
+	LogMessageHandlerFunction GetLogMessageHandler();
 
 	typedef int LogSeverity;
 	const LogSeverity LOG_VERBOSE = -1;
@@ -557,6 +573,8 @@ inline bool InitLogging(const char* log_file,
 
 		LogSeverity severity_;
 		std::ostringstream stream_;
+		size_t message_start_;  // Offset of the start of the message (past prefix
+					// info).
 /* The file and line information passed in to the constructor. */
 		const char* file_;
 		const int line_;

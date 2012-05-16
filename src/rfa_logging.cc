@@ -19,9 +19,9 @@ using rfa::common::RFA_String;
  */
 static const RFA_String kContextName ("RFA");
 
-logging::LogEventProvider::LogEventProvider (
+logging::rfa::LogEventProvider::LogEventProvider (
 	const psych::config_t& config,
-	std::shared_ptr<rfa::common::EventQueue> event_queue
+	std::shared_ptr<::rfa::common::EventQueue> event_queue
 	) :
 	config_ (config),
 	event_queue_ (event_queue),
@@ -32,7 +32,7 @@ logging::LogEventProvider::LogEventProvider (
 /* 9.3.5 RFA Application Logger Shutdown
  * Application Logger Monitors must be destroyed in the reverse order of creation.
  */
-logging::LogEventProvider::~LogEventProvider()
+logging::rfa::LogEventProvider::~LogEventProvider()
 {
 	Unregister();
 }
@@ -44,14 +44,14 @@ logging::LogEventProvider::~LogEventProvider()
  * Returns true on success.
  */
 bool
-logging::LogEventProvider::Register()
+logging::rfa::LogEventProvider::Register()
 {
 	VLOG(2) << "Registering RFA log event provider.";
 /* 9.2.3.1 Initialize the Application logger.
  * The config database may be shared between other components, implying some form of
  * reference counting.
  */
-	logger_.reset (rfa::logger::ApplicationLogger::acquire (kContextName));
+	logger_.reset (::rfa::logger::ApplicationLogger::acquire (kContextName));
 	if (!(bool)logger_)
 		return false;
 
@@ -66,8 +66,8 @@ logging::LogEventProvider::Register()
  * Setting minimum severity to "Success" is defined as everything.
  */
 	VLOG(3) << "Registering RFA logger client.";
-	rfa::logger::AppLoggerInterestSpec log_spec;
-	log_spec.setMinSeverity (rfa::common::Success);
+	::rfa::logger::AppLoggerInterestSpec log_spec;
+	log_spec.setMinSeverity (::rfa::common::Success);
 	handle_ = monitor_->registerLoggerClient (*event_queue_.get(), log_spec, *this, nullptr /* unused closure */);
 	if (nullptr == handle_)
 		return false;
@@ -80,7 +80,7 @@ logging::LogEventProvider::Register()
  * Returns true on success.
  */
 bool
-logging::LogEventProvider::Unregister()
+logging::rfa::LogEventProvider::Unregister()
 {
 	VLOG(2) << "Unregistering RFA log event provider.";
 /* 9.2.4.4 Closing an Event Stream for the Application Logger Monitor. */
@@ -95,20 +95,20 @@ logging::LogEventProvider::Unregister()
 /* RFA event callback from RFA logging system.
  */
 void
-logging::LogEventProvider::processEvent (
-	const rfa::common::Event& event_
+logging::rfa::LogEventProvider::processEvent (
+	const ::rfa::common::Event& event_
 	)
 {
 	switch (event_.getType()) {
-	case rfa::logger::LoggerNotifyEventEnum:
-		processLoggerNotifyEvent (static_cast<const rfa::logger::LoggerNotifyEvent&> (event_));
+	case ::rfa::logger::LoggerNotifyEventEnum:
+		processLoggerNotifyEvent (static_cast<const ::rfa::logger::LoggerNotifyEvent&> (event_));
 		break;
 
         default: break;
         }
 }
 
-std::ostream& operator<< (std::ostream& o, const rfa::logger::LoggerNotifyEvent& event_) {
+std::ostream& operator<< (std::ostream& o, const ::rfa::logger::LoggerNotifyEvent& event_) {
 	static const char* severity[] = {
 		"Success",
 		"Information",
@@ -125,8 +125,8 @@ std::ostream& operator<< (std::ostream& o, const rfa::logger::LoggerNotifyEvent&
 /* RFA log event callback.
  */
 void
-logging::LogEventProvider::processLoggerNotifyEvent (
-	const rfa::logger::LoggerNotifyEvent& event_
+logging::rfa::LogEventProvider::processLoggerNotifyEvent (
+	const ::rfa::logger::LoggerNotifyEvent& event_
 	)
 {
 	LOG(INFO) << event_;

@@ -36,7 +36,10 @@
 
 namespace logging
 {
+namespace rfa
+{
 	class LogEventProvider;
+}
 }
 
 namespace psych
@@ -239,14 +242,14 @@ namespace psych
 		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 
 /* RFA logging */
-		std::shared_ptr<logging::LogEventProvider> log_;
+		std::shared_ptr<logging::rfa::LogEventProvider> log_;
 
 /* RFA provider */
 		std::shared_ptr<provider_t> provider_;
 
 /* Publish instruments. */
 		std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t> connections_;
-		std::map<resource_t, std::map<std::string, std::shared_ptr<broadcast_stream_t>>, resource_compare_t> stream_vector_;
+		std::map<resource_t, std::map<std::string, std::pair<std::string, std::shared_ptr<broadcast_stream_t>>>, resource_compare_t> stream_vector_;
 		boost::shared_mutex query_mutex_;
 
 /* Event pump and thread. */
