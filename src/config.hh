@@ -61,12 +61,14 @@ namespace psych
 
 	struct resource_t
 	{
-		resource_t (const std::string& name_, 
+		resource_t (const std::string& name_,
+			const std::string& source_,
 			const std::string& path_, 
 			unsigned long entitlement_code_, 
 			const std::map<std::string, int>& fields_, 
 			const std::map<std::string, std::pair<std::string, std::string>>& items_) :
 			name (name_),
+			source (source_),
 			path (path_),
 			entitlement_code (entitlement_code_),
 			fields (fields_),
@@ -76,6 +78,9 @@ namespace psych
 
 /* for logging */
 		std::string name;
+
+/* source feed name, i.e. news or social media */
+		std::string source;
 
 /* latest minute feed */
 		std::string path;
@@ -117,7 +122,7 @@ namespace psych
 		bool parseVendorNode (const xercesc::DOMNode* node);
 		bool parsePsychNode (const xercesc::DOMNode* node);
 		bool parseResourceNode (const xercesc::DOMNode* node);
-		bool parseLinkNode (const xercesc::DOMNode* node, std::string* rel, unsigned long* id, std::string* href);
+		bool parseLinkNode (const xercesc::DOMNode* node, std::string* source, std::string* rel, unsigned long* id, std::string* href);
 		bool parseFieldNode (const xercesc::DOMNode* node, std::string* name, int* id);
 		bool parseItemNode (const xercesc::DOMNode* node, std::string* name, std::string* topic, std::string* src);
 
@@ -242,6 +247,7 @@ namespace psych
 	std::ostream& operator<< (std::ostream& o, const resource_t& resource) {
 		o << "{ "
 			  "name: \"" << resource.name << "\""
+			", source: \"" << resource.source << "\""
 			", path: \"" << resource.path << "\""
 			", entitlement_code: \"" << resource.entitlement_code << "\""
 			", fields: [ ";

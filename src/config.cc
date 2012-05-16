@@ -681,13 +681,13 @@ psych::config_t::parseResourceNode (
 /* <link> */
 	nodeList = elem->getElementsByTagName (L"link");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		std::string link_rel, link_href;
+		std::string link_rel, link_name, link_href;
 		unsigned long link_id;
-		if (!parseLinkNode (nodeList->item (i), &link_rel, &link_id, &link_href)) {
+		if (!parseLinkNode (nodeList->item (i), &link_name, &link_rel, &link_id, &link_href)) {
 			LOG(ERROR) << "Failed parsing <link> nth-node #" << (1 + i) << ".";
 			return false;
 		}
-		resources.emplace_back (std::vector<resource_t>::value_type (name, link_href, link_id, fields, items));
+		resources.emplace_back (std::vector<resource_t>::value_type (name, link_name, link_href, link_id, fields, items));
 	}
 	if (0 == nodeList->getLength()) {
 		LOG(WARNING) << "No <link> nodes found.";
@@ -702,6 +702,7 @@ psych::config_t::parseResourceNode (
 bool
 psych::config_t::parseLinkNode (
 	const DOMNode*		node,
+	std::string*		source,
 	std::string*		rel,
 	unsigned long*		id,
 	std::string*		href
@@ -711,13 +712,19 @@ psych::config_t::parseLinkNode (
 	vpf::XMLStringPool xml;
 
 	if (!elem->hasAttributes()) {
-		LOG(ERROR) << "No attributes found, \"rel\" and \"href\" attributes are required.";
+		LOG(ERROR) << "No attributes found, \"rel\", \"name\", and \"href\" attributes are required.";
 		return false;
 	}
 /* rel="resource" */
 	*rel = xml.transcode (elem->getAttribute (L"rel"));
 	if (rel->empty()) {
 		LOG(ERROR) << "Undefined \"rel\" attribute, value cannot be empty.";
+		return false;
+	}
+/* name="source feed name" */
+	*source = xml.transcode (elem->getAttribute (L"name"));
+	if (source->empty()) {
+		LOG(ERROR) << "Undefined \"name\" attribute, value cannot be empty.";
 		return false;
 	}
 /* href="URL" */

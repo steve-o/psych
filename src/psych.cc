@@ -46,6 +46,7 @@ static const int kFieldListId = 3;
 
 /* RDM FIDs. */
 static const int kRdmStockRicId		= 1026;
+static const int kRdmSourceFeedNameId	= 1686;
 static const int kRdmTimestampId	= 6378;
 
 /* FlexRecord Quote identifier. */
@@ -1392,8 +1393,8 @@ psych::psych_t::sendRefresh (
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
 	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry stock_ric_field (false), timestamp_field (false), price_field (false);
-	rfa::data::DataBuffer stock_ric_data (false), timestamp_data (false), price_data (false);
+	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timestamp_field (false), price_field (false);
+	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timestamp_data (false), price_data (false);
 	rfa::data::Real64 real64;
 	struct tm _tm;
 
@@ -1401,6 +1402,14 @@ psych::psych_t::sendRefresh (
  */
 	stock_ric_field.setFieldID (kRdmStockRicId);
 	stock_ric_field.setData (stock_ric_data);
+
+/* SF_NAME
+ */
+	sf_name_field.setFieldID (kRdmSourceFeedNameId);
+	const RFA_String sf_name (resource.source.c_str(), 0, false);
+	sf_name_data.setFromString (sf_name, rfa::data::DataBuffer::StringRMTESEnum);
+	sf_name_field.setData (sf_name_data);
+LOG(INFO) << "sf_name [" << sf_name << "]";
 
 /* TIMESTAMP: ISO 8601 format, UTC: YYYY-MM-DD hh:mm:ss.sss
  */
@@ -1422,8 +1431,8 @@ psych::psych_t::sendRefresh (
 	   << std::setw (2) << (int)close_time.time_of_day().seconds()
 	   << ".000";
 /* stringstream to RFA_String requires a copy */
-	const RFA_String rfa_string (ss.str().c_str(), 0, true);
-	timestamp_data.setFromString (rfa_string, rfa::data::DataBuffer::StringRMTESEnum);
+	const RFA_String timestamp (ss.str().c_str(), 0, true);
+	timestamp_data.setFromString (timestamp, rfa::data::DataBuffer::StringRMTESEnum);
 	timestamp_field.setData (timestamp_data);
 
 /* HIGH_1, LOW_1 as PRICE field type */
@@ -1457,9 +1466,11 @@ psych::psych_t::sendRefresh (
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
 /* STOCK_RIC */
-		const RFA_String rfa_string (jt->second.first.c_str(), 0, false);
-		stock_ric_data.setFromString (rfa_string, rfa::data::DataBuffer::StringAsciiEnum);
+		const RFA_String stock_ric (jt->second.first.c_str(), 0, false);
+		stock_ric_data.setFromString (stock_ric, rfa::data::DataBuffer::StringAsciiEnum);
 		it.bind (stock_ric_field);
+/* SF_NAME */
+		it.bind (sf_name_field);
 /* TIMESTAMP */
 		it.bind (timestamp_field);
 
