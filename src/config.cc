@@ -4,6 +4,7 @@
 #include "config.hh"
 
 #include "chromium/logging.hh"
+#include "chromium/values.hh"
 
 psych::config_t::config_t() :
 /* default values */
@@ -112,6 +113,10 @@ psych::config_t::validate()
 	}
 	return true;
 }
+
+#ifndef CONFIG_PSYCH_AS_APPLICATION
+/* parse configuration from provided XML tree.
+ */
 
 bool
 psych::config_t::parseDomElement (
@@ -817,5 +822,173 @@ psych::config_t::parseItemNode (
 
 /* </psych> */
 /* </config> */
+
+#endif /* CONFIG_PSYCH_AS_APPLICATION */
+
+/* parse configuration from provided JSON tree.
+ */
+
+bool
+psych::config_t::parseConfig (
+	const chromium::DictionaryValue* dict_val
+	)
+{
+	DCHECK(nullptr != dict_val);
+
+	LOG(INFO) << "Parsing configuration ...";
+
+/* validate */
+	if (!dict_val->HasKey ("sessions")) {
+		LOG(ERROR) << "Undefined \"sessions\" array.";
+		return false;
+	}
+	if (!dict_val->HasKey ("resources")) {
+		LOG(ERROR) << "Undefined \"resources\" array.";
+		return false;
+	}
+
+/* Snmp */
+	dict_val->GetBoolean ("is_snmp_enabled", &is_snmp_enabled);
+	dict_val->GetBoolean ("is_agentx_subagent", &is_agentx_subagent);
+	dict_val->GetString ("agentx_socket", &agentx_socket);
+
+/* Configuration override */
+	dict_val->GetString ("key", &key);
+
+/* Rfa */
+	dict_val->GetString ("service_name", &service_name);
+	dict_val->GetString ("dacs_id", &dacs_id);
+/* enumerate sessions */
+	chromium::ListValue* list = nullptr;
+	CHECK (dict_val->GetList ("sessions", &list));
+	LOG_IF(WARNING, 0 == list->GetSize()) << "Empty \"sessions\" array.";
+	for (unsigned i = 0; i < list->GetSize(); ++i) {
+		chromium::Value* tmp_value;
+		CHECK (list->Get (i, &tmp_value));
+		CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
+		if (!parseSession (static_cast<chromium::DictionaryValue*>(tmp_value)))
+			return false;
+	}
+	dict_val->GetString ("monitor_name", &monitor_name);
+	dict_val->GetString ("event_queue_name", &event_queue_name);
+	dict_val->GetString ("vendor_name", &vendor_name);
+
+/* psych application parameters */
+	dict_val->GetString ("interval", &interval);
+	dict_val->GetString ("tolerable_delay", &tolerable_delay);
+	dict_val->GetString ("retry_count", &retry_count);
+	dict_val->GetString ("retry_delay_ms", &retry_delay_ms);
+	dict_val->GetString ("retry_timeout_ms", &retry_timeout_ms);
+	dict_val->GetString ("timeout_ms", &timeout_ms);
+	dict_val->GetString ("connect_timeout_ms", &connect_timeout_ms);
+	dict_val->GetString ("enable_http_pipelining", &enable_http_pipelining);
+	dict_val->GetString ("maximum_response_size", &maximum_response_size);
+	dict_val->GetString ("minimum_response_size", &minimum_response_size);
+	dict_val->GetString ("request_http_encoding", &request_http_encoding);
+	dict_val->GetString ("time_offset_constant", &time_offset_constant);
+	dict_val->GetString ("panic_threshold", &panic_threshold);
+	dict_val->GetString ("http_proxy", &http_proxy);
+	dict_val->GetString ("dns_cache_timeout", &dns_cache_timeout);
+	dict_val->GetString ("base_url", &base_url);
+/* enumerate resources */
+	CHECK (dict_val->GetList ("resources", &list));
+	LOG_IF(WARNING, 0 == list->GetSize()) << "Empty \"resources\" array.";
+	for (unsigned i = 0; i < list->GetSize(); ++i) {
+		chromium::Value* tmp_value;
+		CHECK (list->Get (i, &tmp_value));
+		CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
+		if (!parseResource (static_cast<chromium::DictionaryValue*>(tmp_value)))
+			return false;
+	}
+
+	if (!validate()) {
+		LOG(ERROR) << "Failed validation, malformed configuration file requires correction.";
+		return false;
+	}
+
+	LOG(INFO) << "Parsing complete.";
+	return true;
+}
+
+bool
+psych::config_t::parseSession (
+	const chromium::DictionaryValue* dict_val
+	)
+{
+	DCHECK(nullptr != dict_val);
+
+/* new session */
+	session_config_t session;
+
+	dict_val->GetString ("session_name", &session.session_name);
+	dict_val->GetString ("connection_name", &session.connection_name);
+	dict_val->GetString ("publisher_name", &session.publisher_name);
+/* enumerate Rssl servers */
+	chromium::ListValue* list = nullptr;
+	CHECK (dict_val->GetList ("rssl_servers", &list));
+	LOG_IF(WARNING, 0 == list->GetSize()) << "Empty \"rssl_servers\" array.";
+	for (unsigned i = 0; i < list->GetSize(); ++i) {
+		std::string rssl_server;
+		CHECK (list->GetString (i, &rssl_server));
+		session.rssl_servers.push_back (rssl_server);
+	}
+	dict_val->GetString ("rssl_default_port", &session.rssl_default_port);
+	dict_val->GetString ("application_id", &session.application_id);
+	dict_val->GetString ("instance_id", &session.instance_id);
+	dict_val->GetString ("user_name", &session.user_name);
+	dict_val->GetString ("position", &session.position);
+	sessions.push_back (session);
+	return true;
+}
+
+bool
+psych::config_t::parseResource (
+	const chromium::DictionaryValue* dict_val
+	)
+{
+	DCHECK(nullptr != dict_val);
+
+	std::string name, source, path;
+	unsigned long entitlement_code;
+	std::map<std::string, int> fields;
+	std::map<std::string, std::pair<std::string, std::string>> items;
+
+	dict_val->GetString ("name", &name);
+	dict_val->GetString ("source", &source);
+	dict_val->GetString ("path", &path);
+	int integer_value = 0;
+	dict_val->GetInteger ("entitlement_code", &integer_value);
+/* long promotion, lose any sign. */
+	entitlement_code = integer_value;
+/* enumerate fields */
+	chromium::Value* tmp_value;
+	CHECK (dict_val->Get ("fields", &tmp_value));
+	CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
+	for (chromium::DictionaryValue::Iterator it (*static_cast<chromium::DictionaryValue*>(tmp_value));
+		it.HasNext();
+		it.Advance())
+	{
+		CHECK (it.value().IsType (chromium::Value::TYPE_INTEGER));
+		CHECK (it.value().GetAsInteger (&integer_value));
+		fields.emplace (std::make_pair (it.key(), integer_value));
+	}
+/* enumerate items */
+	CHECK (dict_val->Get ("items", &tmp_value));
+	CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
+	for (chromium::DictionaryValue::Iterator it (*static_cast<chromium::DictionaryValue*>(tmp_value));
+		it.HasNext();
+		it.Advance())
+	{
+		CHECK (it.value().IsType (chromium::Value::TYPE_DICTIONARY));
+		const chromium::DictionaryValue& item_val = *static_cast<const chromium::DictionaryValue*>(&(it.value()));
+		std::string item_name, item_topic;
+		item_val.GetString ("RIC", &item_name);
+		item_val.GetString ("topic", &item_topic);
+		items.emplace (std::make_pair (it.key(), std::make_pair (item_name, item_topic)));
+	}
+/* new resource */
+	resources.emplace_back (std::vector<resource_t>::value_type (name, source, path, entitlement_code, fields, items));
+	return true;
+}
 
 /* eof */

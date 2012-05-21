@@ -14,6 +14,11 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
+namespace chromium
+{
+	class DictionaryValue;
+}
+
 namespace psych
 {
 	struct session_config_t
@@ -105,6 +110,8 @@ namespace psych
 	{
 		config_t();
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
+//  From Xml tree
 		bool parseDomElement (const xercesc::DOMElement* elem);
 		bool parseConfigNode (const xercesc::DOMNode* node);
 		bool parseSnmpNode (const xercesc::DOMNode* node);
@@ -125,6 +132,12 @@ namespace psych
 		bool parseLinkNode (const xercesc::DOMNode* node, std::string* source, std::string* rel, unsigned long* id, std::string* href);
 		bool parseFieldNode (const xercesc::DOMNode* node, std::string* name, int* id);
 		bool parseItemNode (const xercesc::DOMNode* node, std::string* name, std::string* topic, std::string* src);
+#endif
+
+//   From Json tree
+		bool parseConfig (const chromium::DictionaryValue* dict_val);
+		bool parseSession (const chromium::DictionaryValue* dict_val);
+		bool parseResource (const chromium::DictionaryValue* dict_val);
 
 		bool validate();
 
@@ -221,10 +234,10 @@ namespace psych
 	inline
 	std::ostream& operator<< (std::ostream& o, const session_config_t& session) {
 		o << "{ "
-			  "session_name: \"" << session.session_name << "\""
-			", connection_name: \"" << session.connection_name << "\""
-			", publisher_name: \"" << session.publisher_name << "\""
-			", rssl_servers: [ ";
+			  "\"session_name\": \"" << session.session_name << "\""
+			", \"connection_name\": \"" << session.connection_name << "\""
+			", \"publisher_name\": \"" << session.publisher_name << "\""
+			", \"rssl_servers\": [ ";
 		for (auto it = session.rssl_servers.begin();
 			it != session.rssl_servers.end();
 			++it)
@@ -234,11 +247,11 @@ namespace psych
 			o << '"' << *it << '"';
 		}
 		o << " ]"
-			", rssl_default_port: \"" << session.rssl_default_port << "\""
-			", application_id: \"" << session.application_id << "\""
-			", instance_id: \"" << session.instance_id << "\""
-			", user_name: \"" << session.user_name << "\""
-			", position: \"" << session.position << "\""
+			", \"rssl_default_port\": \"" << session.rssl_default_port << "\""
+			", \"application_id\": \"" << session.application_id << "\""
+			", \"instance_id\": \"" << session.instance_id << "\""
+			", \"user_name\": \"" << session.user_name << "\""
+			", \"position\": \"" << session.position << "\""
 			" }";
 		return o;
 	}
@@ -246,47 +259,47 @@ namespace psych
 	inline
 	std::ostream& operator<< (std::ostream& o, const resource_t& resource) {
 		o << "{ "
-			  "name: \"" << resource.name << "\""
-			", source: \"" << resource.source << "\""
-			", path: \"" << resource.path << "\""
-			", entitlement_code: \"" << resource.entitlement_code << "\""
-			", fields: [ ";
+			  "\"name\": \"" << resource.name << "\""
+			", \"source\": \"" << resource.source << "\""
+			", \"path\": \"" << resource.path << "\""
+			", \"entitlement_code\": \"" << resource.entitlement_code << "\""
+			", \"fields\": { ";
 		for (auto it = resource.fields.begin();
 			it != resource.fields.end();
 			++it)
 		{
-			if (it != resource.fields.end())
+			if (it != resource.fields.begin())
 				o << ", ";
 			o << '"' << it->first << "\": " << it->second;
 		}
-		o << " ]"
-			", items: [ ";
+		o << " }"
+			", \"items\": { ";
 		for (auto it = resource.items.begin();
 			it != resource.items.end();
 			++it)
 		{
-			if (it != resource.items.end())
+			if (it != resource.items.begin())
 				o << ", ";
 			o << '"' << it->first << "\": { "
-				  "RIC: \"" << it->second.first << "\""
-				", topic: \"" << it->second.second << "\""
+				  "\"RIC\": \"" << it->second.first << "\""
+				", \"topic\": \"" << it->second.second << "\""
 				" }";
 		}
-		o << " ]"
+		o << " }"
 			" }";
 		return o;
 	}
 
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
-		o << "config_t: { "
-			  "is_snmp_enabled: \"" << config.is_snmp_enabled << "\""
-			", is_agentx_subagent: \"" << config.is_agentx_subagent << "\""
-			", agentx_socket: \"" << config.agentx_socket << "\""
-			", key: \"" << config.key << "\""
-			", service_name: \"" << config.service_name << "\""
-			", dacs_id: \"" << config.dacs_id << "\""
-			", sessions: [";
+		o << "\"config_t\": { "
+			  "\"is_snmp_enabled\": \"" << config.is_snmp_enabled << "\""
+			", \"is_agentx_subagent\": \"" << config.is_agentx_subagent << "\""
+			", \"agentx_socket\": \"" << config.agentx_socket << "\""
+			", \"key\": \"" << config.key << "\""
+			", \"service_name\": \"" << config.service_name << "\""
+			", \"dacs_id\": \"" << config.dacs_id << "\""
+			", \"sessions\": [";
 		for (auto it = config.sessions.begin();
 			it != config.sessions.end();
 			++it)
@@ -296,26 +309,26 @@ namespace psych
 			o << *it;
 		}
 		o << " ]"
-			", monitor_name: \"" << config.monitor_name << "\""
-			", event_queue_name: \"" << config.event_queue_name << "\""
-			", vendor_name: \"" << config.vendor_name << "\""
-			", interval: \"" << config.interval << "\""
-			", tolerable_delay: \"" << config.tolerable_delay << "\""
-			", retry_count: \"" << config.retry_count << "\""
-			", retry_delay_ms: \"" << config.retry_delay_ms << "\""
-			", retry_timeout_ms: \"" << config.retry_timeout_ms << "\""
-			", timeout_ms: \"" << config.timeout_ms << "\""
-			", connect_timeout_ms: \"" << config.connect_timeout_ms << "\""
-			", enable_http_pipelining: \"" << config.enable_http_pipelining << "\""
-			", maximum_response_size: \"" << config.maximum_response_size << "\""
-			", minimum_response_size: \"" << config.minimum_response_size << "\""
-			", request_http_encoding: \"" << config.request_http_encoding << "\""
-			", time_offset_constant: \"" << config.time_offset_constant << "\""
-			", panic_threshold: \"" << config.panic_threshold << "\""
-			", http_proxy: \"" << config.http_proxy << "\""
-			", dns_cache_timeout: \"" << config.dns_cache_timeout << "\""
-			", base_url: \"" << config.base_url << "\""
-			", resources: [";
+			", \"monitor_name\": \"" << config.monitor_name << "\""
+			", \"event_queue_name\": \"" << config.event_queue_name << "\""
+			", \"vendor_name\": \"" << config.vendor_name << "\""
+			", \"interval\": \"" << config.interval << "\""
+			", \"tolerable_delay\": \"" << config.tolerable_delay << "\""
+			", \"retry_count\": \"" << config.retry_count << "\""
+			", \"retry_delay_ms\": \"" << config.retry_delay_ms << "\""
+			", \"retry_timeout_ms\": \"" << config.retry_timeout_ms << "\""
+			", \"timeout_ms\": \"" << config.timeout_ms << "\""
+			", \"connect_timeout_ms\": \"" << config.connect_timeout_ms << "\""
+			", \"enable_http_pipelining\": \"" << config.enable_http_pipelining << "\""
+			", \"maximum_response_size\": \"" << config.maximum_response_size << "\""
+			", \"minimum_response_size\": \"" << config.minimum_response_size << "\""
+			", \"request_http_encoding\": \"" << config.request_http_encoding << "\""
+			", \"time_offset_constant\": \"" << config.time_offset_constant << "\""
+			", \"panic_threshold\": \"" << config.panic_threshold << "\""
+			", \"http_proxy\": \"" << config.http_proxy << "\""
+			", \"dns_cache_timeout\": \"" << config.dns_cache_timeout << "\""
+			", \"base_url\": \"" << config.base_url << "\""
+			", \"resources\": [";
 		for (auto it = config.resources.begin();
 			it != config.resources.end();
 			++it)
@@ -324,7 +337,7 @@ namespace psych
 				o << ", ";
 			o << *it;
 		}
-		o << " ]";
+		o << " ]"
 			" }";
 		return o;
 	}

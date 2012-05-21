@@ -12,9 +12,12 @@
 /* Boost Posix Time */
 #include "boost/date_time/gregorian/gregorian_types.hpp"
 
+#include "chromium/file_util.hh"
 #include "chromium/logging.hh"
 #include "chromium/string_split.hh"
 #include "chromium/string_tokenizer.hh"
+#include "chromium/json/json_reader.hh"
+#include "chromium/values.hh"
 #include "snmp_agent.hh"
 #include "error.hh"
 #include "rfa_logging.hh"
@@ -55,6 +58,9 @@ static const uint32_t kQuoteId = 40002;
 /* Feed log file FlexRecord name */
 static const char* kPsychFlexRecordName = "psych";
 
+/* JSON configuration file */
+static const char* kConfigJson = "config.json";
+
 /* Tcl exported API. */
 static const char* kBasicFunctionName = "psych_republish";
 static const char* kResetFunctionName = "psych_hard_republish";
@@ -68,6 +74,8 @@ std::list<psych::psych_t*> psych::psych_t::global_list_;
 boost::shared_mutex psych::psych_t::global_list_lock_;
 
 using rfa::common::RFA_String;
+
+static std::weak_ptr<rfa::common::EventQueue> g_event_queue;
 
 /* Boney M. defined: round half up the river of Babylon.
  */
@@ -278,6 +286,7 @@ psych::psych_t::~psych_t()
 	clear();
 }
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Plugin entry point from the Velocity Analytics Engine.
  */
 
@@ -292,7 +301,8 @@ psych::psych_t::init (
 /* Save copies of provided identifiers. */
 	plugin_id_.assign (vpf_config.getPluginId());
 	plugin_type_.assign (vpf_config.getPluginType());
-	LOG(INFO) << "{ pluginType: \"" << plugin_type_ << "\""
+	LOG(INFO) << "{ "
+		  "pluginType: \"" << plugin_type_ << "\""
 		", pluginId: \"" << plugin_id_ << "\""
 		", instance: " << instance_ <<
 		", version: \"" << version_major << '.' << version_minor << '.' << version_build << "\""
@@ -302,10 +312,22 @@ psych::psych_t::init (
 			", machine: \"" << build_machine << "\""
 			" }"
 		" }";
+	
+	if (!config_.parseDomElement (vpf_config.getXmlConfigData())) {
+		is_shutdown_ = true;
+		throw vpf::UserPluginException ("Invalid configuration, aborting.");
+	}
+	if (!init()) {
+		clear();
+		is_shutdown_ = true;
+		throw vpf::UserPluginException ("Initialization failed, aborting.");
+	}
+}
+#endif /* CONFIG_PSYCH_AS_APPLICATION */
 
-	if (!config_.parseDomElement (vpf_config.getXmlConfigData()))
-		goto cleanup;
-
+bool
+psych::psych_t::init()
+{
 	LOG(INFO) << config_;
 
 /** libcurl initialisation. **/
@@ -315,14 +337,14 @@ psych::psych_t::init (
 		curl_errno = curl_global_init (CURL_GLOBAL_ALL);
 		if (CURLE_OK != curl_errno) {
 			LOG(ERROR) << "curl_global_init failed: { code: " << (int)curl_errno << " }";
-			goto cleanup;
+			return false;
 		}
 	}
 
 /* multi-interface context */
 	multipass_.reset (curl_multi_init());
 	if (!(bool)multipass_)
-		goto cleanup;
+		return false;
 
 	CURLMcode curl_merrno;
 /* libcurl 7.16.0: HTTP Pipelining as far as possible. */
@@ -345,23 +367,25 @@ psych::psych_t::init (
 /* RFA context. */
 		rfa_.reset (new rfa_t (config_));
 		if (!(bool)rfa_ || !rfa_->init())
-			goto cleanup;
+			return false;
 
 /* RFA asynchronous event queue. */
 		const RFA_String eventQueueName (config_.event_queue_name.c_str(), 0, false);
 		event_queue_.reset (rfa::common::EventQueue::create (eventQueueName), std::mem_fun (&rfa::common::EventQueue::destroy));
 		if (!(bool)event_queue_)
-			goto cleanup;
+			return false;
+/* Create weak pointer to handle application shutdown. */
+		g_event_queue = event_queue_;
 
 /* RFA logging. */
 		log_.reset (new logging::rfa::LogEventProvider (config_, event_queue_));
 		if (!(bool)log_ || !log_->Register())
-			goto cleanup;
+			return false;
 
 /* RFA provider. */
 		provider_.reset (new provider_t (config_, rfa_, event_queue_));
 		if (!(bool)provider_ || !provider_->init())
-			goto cleanup;
+			return false;
 
 /* Create state for published instruments.
  */
@@ -382,7 +406,7 @@ psych::psych_t::init (
 				auto stream = std::make_shared<broadcast_stream_t> (*it);
 				assert ((bool)stream);
 				if (!provider_->createItemStream (jt->second.first.c_str(), stream))
-					goto cleanup;
+					return false;
 				name_map.emplace (std::make_pair (jt->first, std::make_pair (jt->second.second, stream)));
 			}
 			stream_vector_.emplace (std::make_pair (*it, name_map));
@@ -391,14 +415,14 @@ psych::psych_t::init (
 /* Microsoft threadpool timer. */
 		timer_.reset (CreateThreadpoolTimer (static_cast<PTP_TIMER_CALLBACK>(on_timer), this /* closure */, nullptr /* env */));
 		if (!(bool)timer_)
-			goto cleanup;
+			return false;
 
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			"Severity: \"" << severity_string (e.getSeverity()) << "\""
 			", Classification: \"" << classification_string (e.getClassification()) << "\""
 			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
-		goto cleanup;
+		return false;
 	} catch (rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
 			"Severity: \"" << severity_string (e.getSeverity()) << "\""
@@ -406,37 +430,41 @@ psych::psych_t::init (
 			", StatusText: \"" << e.getStatus().getStatusText() << "\""
 			", ParameterName: \"" << e.getParameterName() << "\""
 			", ParameterValue: \"" << e.getParameterValue() << "\" }";
-		goto cleanup;
+		return false;
 	}
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* No main loop inside this thread, must spawn new thread for message pump. */
 	event_pump_.reset (new event_pump_t (event_queue_));
 	if (!(bool)event_pump_)
-		goto cleanup;
+		return false;
 
 	thread_.reset (new boost::thread (*event_pump_.get()));
 	if (!(bool)thread_)
-		goto cleanup;
+		return false;
+#endif /* CONFIG_PSYCH_AS_APPLICATION */
 
 /* Spawn SNMP implant. */
 	if (config_.is_snmp_enabled) {
 		snmp_agent_.reset (new snmp_agent_t (*this));
 		if (!(bool)snmp_agent_)
-			goto cleanup;
+			return false;
 	}
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Register Tcl API. */
 	registerCommand (getId(), kBasicFunctionName);
 	LOG(INFO) << "Registered Tcl API \"" << kBasicFunctionName << "\"";
 	registerCommand (getId(), kResetFunctionName);
 	LOG(INFO) << "Registered Tcl API \"" << kResetFunctionName << "\"";
+#endif
 
 /* Timer for periodic publishing.
  */
 	FILETIME due_time;
 	if (!get_next_interval (&due_time)) {
 		LOG(ERROR) << "Cannot calculate next interval.";
-		goto cleanup;
+		return false;
 	}
 	const DWORD timer_period = std::stoul (config_.interval) * 1000;
 #if 1
@@ -473,13 +501,88 @@ psych::psych_t::init (
 	}
 #endif
 	LOG(INFO) << "Init complete, awaiting queries.";
+	return true;
+}
 
-	return;
-cleanup:
-	LOG(INFO) << "Init failed, cleaning up.";
-	clear();
-	is_shutdown_ = true;
-	throw vpf::UserPluginException ("Init failed.");
+/* Application entry point.
+ */
+int
+psych::psych_t::run()
+{
+	std::unique_ptr<chromium::Value> root;
+	std::string json;
+
+	if (!file_util::ReadFileToString (kConfigJson, &json))
+		return EXIT_FAILURE;
+{
+	int error_code; std::string error_msg;
+	chromium::Value* v = chromium::JSONReader::ReadAndReturnError (json, false, &error_code, &error_msg);
+	printf ("%d [%s]\n", error_code, error_msg.c_str());
+}
+	root.reset (chromium::JSONReader::Read (json, false));
+	CHECK (root.get());
+	CHECK (root->IsType (chromium::Value::TYPE_DICTIONARY));
+	if (!config_.parseConfig (static_cast<chromium::DictionaryValue*>(root.get())))
+		return EXIT_FAILURE;
+
+	if (!init())
+		return EXIT_FAILURE;
+
+	LOG(INFO) << "Init complete, entering main loop.";
+	mainLoop();
+
+	LOG(INFO) << "Main loop terminated.";
+	destroy();
+	return EXIT_SUCCESS;
+}
+
+/* On a shutdown event set a global flag and force the event queue
+ * to catch the event by submitting a log event.
+ */
+static
+BOOL
+CtrlHandler (
+	DWORD	fdwCtrlType
+	)
+{
+	const char* message;
+	switch (fdwCtrlType) {
+	case CTRL_C_EVENT:
+		message = "Caught ctrl-c event, shutting down";
+		break;
+	case CTRL_CLOSE_EVENT:
+		message = "Caught close event, shutting down";
+		break;
+	case CTRL_BREAK_EVENT:
+		message = "Caught ctrl-break event, shutting down";
+		break;
+	case CTRL_LOGOFF_EVENT:
+		message = "Caught logoff event, shutting down";
+		break;
+	case CTRL_SHUTDOWN_EVENT:
+	default:
+		message = "Caught shutdown event, shutting down";
+		break;
+	}
+/* if available, deactivate global event queue pointer to break running loop. */
+	if (!g_event_queue.expired()) {
+		auto sp = g_event_queue.lock();
+		sp->deactivate();
+	}
+	LOG(INFO) << message;
+	return TRUE;
+}
+
+void
+psych::psych_t::mainLoop()
+{
+/* Add shutdown handler. */
+	::SetConsoleCtrlHandler ((PHANDLER_ROUTINE)::CtrlHandler, TRUE);
+	while (event_queue_->isActive()) {
+		event_queue_->dispatch (rfa::common::Dispatchable::InfiniteWait);
+	}
+/* Remove shutdown handler. */
+	::SetConsoleCtrlHandler ((PHANDLER_ROUTINE)::CtrlHandler, FALSE);
 }
 
 void
@@ -527,20 +630,25 @@ void
 psych::psych_t::destroy()
 {
 	LOG(INFO) << "Closing instance.";
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Unregister Tcl API. */
 	deregisterCommand (getId(), kBasicFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kBasicFunctionName << "\"";
 	deregisterCommand (getId(), kResetFunctionName);
 	LOG(INFO) << "Unregistered Tcl API \"" << kResetFunctionName << "\"";
+#endif
 	clear();
 	LOG(INFO) << "Runtime summary: {"
 		    " tclQueryReceived: " << cumulative_stats_[PSYCH_PC_TCL_QUERY_RECEIVED] <<
 		   ", timerQueryReceived: " << cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED] <<
 		" }";
 	LOG(INFO) << "Instance closed.";
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 	vpf::AbstractUserPlugin::destroy();
+#endif
 }
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Tcl boilerplate.
  */
 
@@ -676,6 +784,8 @@ psych::psych_t::tclPsychHardRepublish (
 
 	return TCL_OK;
 }
+
+#endif /* CONFIG_PSYCH_AS_APPLICATION */
 
 class flexrecord_t {
 public:
@@ -1409,7 +1519,6 @@ psych::psych_t::sendRefresh (
 	const RFA_String sf_name (resource.source.c_str(), 0, false);
 	sf_name_data.setFromString (sf_name, rfa::data::DataBuffer::StringRMTESEnum);
 	sf_name_field.setData (sf_name_data);
-LOG(INFO) << "sf_name [" << sf_name << "]";
 
 /* TIMESTAMP: ISO 8601 format, UTC: YYYY-MM-DD hh:mm:ss.sss
  */

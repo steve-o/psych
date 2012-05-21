@@ -8,7 +8,7 @@ project (psych)
 
 set(PSYCH_VERSION_MAJOR 0)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 3)
+set(PSYCH_VERSION_BUILD 4)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
@@ -70,6 +70,9 @@ find_package (Boost 1.44 COMPONENTS thread REQUIRED)
 
 find_package(PythonInterp REQUIRED)
 
+option(CONFIG_PSYCH_AS_APPLICATION
+	"Build an application instead of a library." ON)
+
 #-----------------------------------------------------------------------------
 # force off-tree build
 
@@ -112,6 +115,12 @@ add_definitions(
 	-DOFFICIAL_BUILD
 )
 
+if (CONFIG_PSYCH_AS_APPLICATION)
+	add_definitions(
+		-DCONFIG_PSYCH_AS_APPLICATION
+	)
+endif (CONFIG_PSYCH_AS_APPLICATION)
+
 # SEH Exceptions
 set(CMAKE_CXX_FLAGS "/EHa")
 
@@ -137,6 +146,7 @@ configure_file(
 set(cxx-sources
 	src/config.cc
 	src/error.cc
+	src/main.cc
 	src/plugin.cc
 	src/provider.cc
 	src/rfa.cc
@@ -149,19 +159,24 @@ set(cxx-sources
 	src/chromium/command_line.cc
 	src/chromium/debug/stack_trace.cc
 	src/chromium/debug/stack_trace_win.cc
+	src/chromium/file_util.cc
+	src/chromium/file_util_win.cc
+	src/chromium/json/json_reader.cc
 	src/chromium/memory/singleton.cc
 	src/chromium/logging.cc
 	src/chromium/logging_win.cc
 	src/chromium/string_piece.cc
 	src/chromium/string_split.cc
 	src/chromium/string_util.cc
+	src/chromium/string_number_conversions.cc
+	src/chromium/stringprintf.cc
 	src/chromium/synchronization/lock.cc
 	src/chromium/synchronization/lock_impl_win.cc
+	src/chromium/values.cc
 	src/chromium/vlog.cc
 	src/chromium/win/event_trace_provider.cc
 	${CMAKE_BINARY_DIR}/version.cc
 )
-
 configure_file(
 	${CMAKE_SOURCE_DIR}/version.rc.in
 	${CMAKE_BINARY_DIR}/version.rc
@@ -191,17 +206,28 @@ link_directories(
 #-----------------------------------------------------------------------------
 # output
 
-add_library(psych SHARED ${cxx-sources} ${rc-sources})
-
-target_link_libraries(psych
-	${CURL_LIBRARIES}
-	${NETSNMP_LIBRARIES}
-	${VHAYU_LIBRARIES}
-	${RFA_LIBRARIES}
-	${Boost_LIBRARIES}
-	ws2_32.lib
-	dbghelp.lib
-)
+if (CONFIG_PSYCH_AS_APPLICATION)
+	add_executable(psych ${cxx-sources} ${rc-sources})
+	target_link_libraries(psych
+		${CURL_LIBRARIES}
+		${NETSNMP_LIBRARIES}
+		${RFA_LIBRARIES}
+		${Boost_LIBRARIES}
+		ws2_32.lib
+		dbghelp.lib
+	)
+else (CONFIG_PSYCH_AS_APPLICATION)
+	add_library(psych SHARED ${cxx-sources} ${rc-sources})
+	target_link_libraries(psych
+		${CURL_LIBRARIES}
+		${NETSNMP_LIBRARIES}
+		${VHAYU_LIBRARIES}
+		${RFA_LIBRARIES}
+		${Boost_LIBRARIES}
+		ws2_32.lib
+		dbghelp.lib
+	)
+endif (CONFIG_PSYCH_AS_APPLICATION)
 
 set(rfa_runtime_libraries
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
@@ -217,10 +243,18 @@ set(rfa_runtime_libraries
 	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
 )
 
-set(config
-	${CMAKE_CURRENT_SOURCE_DIR}/config/psych.xml
-	${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
-)
+if (CONFIG_PSYCH_AS_APPLICATION)
+	set(config
+		${CMAKE_CURRENT_SOURCE_DIR}/config/config.json
+		${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+	)
+else (CONFIG_PSYCH_AS_APPLICATION)
+	set(config
+		${CMAKE_CURRENT_SOURCE_DIR}/config/psych.xml
+		${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+	)
+endif (CONFIG_PSYCH_AS_APPLICATION)
+
 file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
 
 install (TARGETS psych DESTINATION bin)
@@ -232,7 +266,11 @@ set (CPACK_SOURCE_IGNORE_FILES "*.lib")
 
 include (InstallRequiredSystemLibraries)
 set (CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
-set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Velocity Analytics MarketPsych plugin")
+if (CONFIG_PSYCH_AS_APPLICATION)
+	set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Velocity Analytics MarketPsych application")
+else (CONFIG_PSYCH_AS_APPLICATION)
+	set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Velocity Analytics MarketPsych plugin")
+endif (CONFIG_PSYCH_AS_APPLICATION)
 set (CPACK_PACKAGE_VENDOR "Thomson Reuters")
 set (CPACK_NSIS_CONTACT "Steven McCoy <Steven.McCoy@thomsonreuters.com>")
 # There is a bug in NSI that does not handle full unix paths properly. Make

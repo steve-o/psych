@@ -1,0 +1,1106 @@
+{
+   "is_snmp_enabled":"1",
+   "is_agentx_subagent":"1",
+   "agentx_socket":"tcp:localhost:705",
+   "key":"",
+   "service_name":"NI_VTA",
+   "dacs_id":"307",
+   "sessions":[
+      {
+         "session_name":"SESSIONA",
+         "connection_name":"CONNECTIONA",
+         "publisher_name":"PUBLISHERA",
+         "rssl_servers":[
+            "nylabadh2"
+         ],
+         "rssl_default_port":"14003",
+         "application_id":"256",
+         "instance_id":"Instance1",
+         "user_name":"user1",
+         "position":""
+      }
+   ],
+   "monitor_name":"ApplicationLoggerMonitorName",
+   "event_queue_name":"EventQueueName",
+   "vendor_name":"Thomson Reuters",
+   "interval":"60",
+   "tolerable_delay":"",
+   "retry_count":"3",
+   "retry_delay_ms":"0",
+   "retry_timeout_ms":"32000",
+   "timeout_ms":"48000",
+   "connect_timeout_ms":"8000",
+   "enable_http_pipelining":"0",
+   "maximum_response_size":"65536",
+   "minimum_response_size":"128",
+   "request_http_encoding":"deflate",
+   "time_offset_constant":"00:00:16.000",
+   "panic_threshold":"1000",
+   "http_proxy":"10.65.98.107:8080",
+   "dns_cache_timeout":"60",
+   "base_url":"http://trmpmitr:kR39[b$vN4@pipeline2m.velocity.marketpsychdata.com/feed/minutely/",
+   "resources":[
+      {
+         "name":"Equity",
+         "source":"mpnews",
+         "path":"news/equities-latest.n.txt",
+         "entitlement_code":"2",
+         "fields":{
+            "Anger":12,
+            "Bubbleometer":27,
+            "Buzz":6,
+            "Conflict":22,
+            "EarningsExpectations":34,
+            "EconomicUncertainty":25,
+            "Fear":10,
+            "FundamentalStrength":26,
+            "Gloom":9,
+            "Innovation":13,
+            "Joy":11,
+            "Layoffs":35,
+            "Litigation":36,
+            "Mergers":48,
+            "Optimism":8,
+            "PriceForecast":51,
+            "Sentiment":7,
+            "Stress":23,
+            "Trust":19,
+            "UpgradeVsDowngradeBuzz":47,
+            "Urgency":24,
+            "Violence":21,
+            "Volatility":50
+         },
+         "items":{
+            "Agribusiness":{
+               "RIC":"MOO.P",
+               "topic":"MOO.P"
+            },
+            "Airlines":{
+               "RIC":"FAA.P",
+               "topic":"FAA.P"
+            },
+            "Banking":{
+               "RIC":"KBE.P",
+               "topic":"KBE.P"
+            },
+            "Basic Materials":{
+               "RIC":"XLB.P",
+               "topic":"XLB.P"
+            },
+            "Biotech":{
+               "RIC":"IBB.OQ",
+               "topic":"IBB.OQ"
+            },
+            "Building and Construction":{
+               "RIC":"PKB.P",
+               "topic":"PKB.P"
+            },
+            "Clean Energy":{
+               "RIC":"PBW.P",
+               "topic":"PBW.P"
+            },
+            "Coal":{
+               "RIC":"KOL.P",
+               "topic":"KOL.P"
+            },
+            "Consumer Discretionary":{
+               "RIC":"XLY.P",
+               "topic":"XLY.P"
+            },
+            "Consumer Services":{
+               "RIC":"IYC.P",
+               "topic":"IYC.P"
+            },
+            "Consumer Staples":{
+               "RIC":"XLP.P",
+               "topic":"XLP.P"
+            },
+            "Copper Miners":{
+               "RIC":"COPX.P",
+               "topic":"COPX.P"
+            },
+            "DowJones30":{
+               "RIC":"DIA.P",
+               "topic":"DIA.P"
+            },
+            "Energy":{
+               "RIC":"XLE.P",
+               "topic":"XLE.P"
+            },
+            "Energy Exploration and Production":{
+               "RIC":"PXE.P",
+               "topic":"PXE.P"
+            },
+            "Financials":{
+               "RIC":"XLF.P",
+               "topic":"XLF.P"
+            },
+            "Food and Beverage":{
+               "RIC":"PBJ.P",
+               "topic":"PBJ.P"
+            },
+            "Gaming":{
+               "RIC":"BJK.P",
+               "topic":"BJK.P"
+            },
+            "Gold Miners":{
+               "RIC":"GDX.P",
+               "topic":"GDX.P"
+            },
+            "Healthcare":{
+               "RIC":"XLV.P",
+               "topic":"XLV.P"
+            },
+            "Homebuilders":{
+               "RIC":"XHB.P",
+               "topic":"XHB.P"
+            },
+            "Industrials":{
+               "RIC":"VIS.P",
+               "topic":"VIS.P"
+            },
+            "Internet":{
+               "RIC":"FDN.P",
+               "topic":"FDN.P"
+            },
+            "Leisure and Entertainment":{
+               "RIC":"PEJ.P",
+               "topic":"PEJ.P"
+            },
+            "Media":{
+               "RIC":"PBS.P",
+               "topic":"PBS.P"
+            },
+            "Nasdaq100":{
+               "RIC":"QQQ.O",
+               "topic":"QQQ.O"
+            },
+            "Oil Services":{
+               "RIC":"OIH.P",
+               "topic":"OIH.P"
+            },
+            "Real Estate":{
+               "RIC":"IYR.P",
+               "topic":"IYR.P"
+            },
+            "Regional Banking":{
+               "RIC":"KRE.P",
+               "topic":"KRE.P"
+            },
+            "Retail":{
+               "RIC":"XRT.P",
+               "topic":"XRT.P"
+            },
+            "Russell2000":{
+               "RIC":"IWM.P",
+               "topic":"IWM.P"
+            },
+            "SP500":{
+               "RIC":"SPY.P",
+               "topic":"SPY.P"
+            },
+            "Semiconductors":{
+               "RIC":"SMH.P",
+               "topic":"SMH.P"
+            },
+            "Social Media":{
+               "RIC":"SOCL.O",
+               "topic":"SOCL.O"
+            },
+            "Solar Energy":{
+               "RIC":"TAN.P",
+               "topic":"TAN.P"
+            },
+            "Technology":{
+               "RIC":"IYW.P",
+               "topic":"IYW.P"
+            },
+            "Telecommunications (US)":{
+               "RIC":"IYZ.P",
+               "topic":"IYZ.P"
+            },
+            "Transportation":{
+               "RIC":"IYT.P",
+               "topic":"IYT.P"
+            },
+            "US Aerospace and Defence":{
+               "RIC":"ITA.P",
+               "topic":"ITA.P"
+            },
+            "Utilities":{
+               "RIC":"XLU.P",
+               "topic":"XLU.P"
+            }
+         }
+      },
+      {
+         "name":"Equity",
+         "source":"mpsm",
+         "path":"socialmedia/equities-latest.s.txt",
+         "entitlement_code":"1",
+         "fields":{
+            "Anger":12,
+            "Bubbleometer":27,
+            "Buzz":6,
+            "Conflict":22,
+            "EarningsExpectations":34,
+            "EconomicUncertainty":25,
+            "Fear":10,
+            "FundamentalStrength":26,
+            "Gloom":9,
+            "Innovation":13,
+            "Joy":11,
+            "Layoffs":35,
+            "Litigation":36,
+            "Mergers":48,
+            "Optimism":8,
+            "PriceForecast":51,
+            "Sentiment":7,
+            "Stress":23,
+            "Trust":19,
+            "UpgradeVsDowngradeBuzz":47,
+            "Urgency":24,
+            "Violence":21,
+            "Volatility":50
+         },
+         "items":{
+            "Agribusiness":{
+               "RIC":"MOO.P",
+               "topic":"MOO.P"
+            },
+            "Airlines":{
+               "RIC":"FAA.P",
+               "topic":"FAA.P"
+            },
+            "Banking":{
+               "RIC":"KBE.P",
+               "topic":"KBE.P"
+            },
+            "Basic Materials":{
+               "RIC":"XLB.P",
+               "topic":"XLB.P"
+            },
+            "Biotech":{
+               "RIC":"IBB.OQ",
+               "topic":"IBB.OQ"
+            },
+            "Building and Construction":{
+               "RIC":"PKB.P",
+               "topic":"PKB.P"
+            },
+            "Clean Energy":{
+               "RIC":"PBW.P",
+               "topic":"PBW.P"
+            },
+            "Coal":{
+               "RIC":"KOL.P",
+               "topic":"KOL.P"
+            },
+            "Consumer Discretionary":{
+               "RIC":"XLY.P",
+               "topic":"XLY.P"
+            },
+            "Consumer Services":{
+               "RIC":"IYC.P",
+               "topic":"IYC.P"
+            },
+            "Consumer Staples":{
+               "RIC":"XLP.P",
+               "topic":"XLP.P"
+            },
+            "Copper Miners":{
+               "RIC":"COPX.P",
+               "topic":"COPX.P"
+            },
+            "DowJones30":{
+               "RIC":"DIA.P",
+               "topic":"DIA.P"
+            },
+            "Energy":{
+               "RIC":"XLE.P",
+               "topic":"XLE.P"
+            },
+            "Energy Exploration and Production":{
+               "RIC":"PXE.P",
+               "topic":"PXE.P"
+            },
+            "Financials":{
+               "RIC":"XLF.P",
+               "topic":"XLF.P"
+            },
+            "Food and Beverage":{
+               "RIC":"PBJ.P",
+               "topic":"PBJ.P"
+            },
+            "Gaming":{
+               "RIC":"BJK.P",
+               "topic":"BJK.P"
+            },
+            "Gold Miners":{
+               "RIC":"GDX.P",
+               "topic":"GDX.P"
+            },
+            "Healthcare":{
+               "RIC":"XLV.P",
+               "topic":"XLV.P"
+            },
+            "Homebuilders":{
+               "RIC":"XHB.P",
+               "topic":"XHB.P"
+            },
+            "Industrials":{
+               "RIC":"VIS.P",
+               "topic":"VIS.P"
+            },
+            "Internet":{
+               "RIC":"FDN.P",
+               "topic":"FDN.P"
+            },
+            "Leisure and Entertainment":{
+               "RIC":"PEJ.P",
+               "topic":"PEJ.P"
+            },
+            "Media":{
+               "RIC":"PBS.P",
+               "topic":"PBS.P"
+            },
+            "Nasdaq100":{
+               "RIC":"QQQ.O",
+               "topic":"QQQ.O"
+            },
+            "Oil Services":{
+               "RIC":"OIH.P",
+               "topic":"OIH.P"
+            },
+            "Real Estate":{
+               "RIC":"IYR.P",
+               "topic":"IYR.P"
+            },
+            "Regional Banking":{
+               "RIC":"KRE.P",
+               "topic":"KRE.P"
+            },
+            "Retail":{
+               "RIC":"XRT.P",
+               "topic":"XRT.P"
+            },
+            "Russell2000":{
+               "RIC":"IWM.P",
+               "topic":"IWM.P"
+            },
+            "SP500":{
+               "RIC":"SPY.P",
+               "topic":"SPY.P"
+            },
+            "Semiconductors":{
+               "RIC":"SMH.P",
+               "topic":"SMH.P"
+            },
+            "Social Media":{
+               "RIC":"SOCL.O",
+               "topic":"SOCL.O"
+            },
+            "Solar Energy":{
+               "RIC":"TAN.P",
+               "topic":"TAN.P"
+            },
+            "Technology":{
+               "RIC":"IYW.P",
+               "topic":"IYW.P"
+            },
+            "Telecommunications (US)":{
+               "RIC":"IYZ.P",
+               "topic":"IYZ.P"
+            },
+            "Transportation":{
+               "RIC":"IYT.P",
+               "topic":"IYT.P"
+            },
+            "US Aerospace and Defence":{
+               "RIC":"ITA.P",
+               "topic":"ITA.P"
+            },
+            "Utilities":{
+               "RIC":"XLU.P",
+               "topic":"XLU.P"
+            }
+         }
+      },
+      {
+         "name":"currencies",
+         "source":"mpnews",
+         "path":"news/currencies-latest.n.txt",
+         "entitlement_code":"4",
+         "fields":{
+            "Buzz":6,
+            "CarryTradeBuzz":53,
+            "Conflict":22,
+            "CurrencyPegInstability":54,
+            "CurrencyPriceForecast":51,
+            "CurrencyPriceMomentum":56,
+            "Fear":10,
+            "Joy":11,
+            "Optimism":8,
+            "PriceUp":57,
+            "Sentiment":7,
+            "Trust":19,
+            "Uncertainty":25,
+            "Urgency":24,
+            "Violence":21
+         },
+         "items":{
+            "Australian Dollar":{
+               "RIC":"AUD=",
+               "topic":"AUD="
+            },
+            "Brazilian Real":{
+               "RIC":"BRL=",
+               "topic":"BRL="
+            },
+            "Canadian Dollar":{
+               "RIC":"CAD=",
+               "topic":"CAD="
+            },
+            "China Yuan Renminbi":{
+               "RIC":"CNY=",
+               "topic":"CNY="
+            },
+            "Denmark Krone":{
+               "RIC":"DKK=",
+               "topic":"DKK="
+            },
+            "Egypt Pound":{
+               "RIC":"EGP=",
+               "topic":"EGP="
+            },
+            "Euro":{
+               "RIC":"EUR=",
+               "topic":"EUR="
+            },
+            "Hong Kong Dollar":{
+               "RIC":"HKD=",
+               "topic":"HKD="
+            },
+            "India Rupee":{
+               "RIC":"INR=",
+               "topic":"INR="
+            },
+            "Indonesia Rupiah":{
+               "RIC":"IDR=",
+               "topic":"IDR="
+            },
+            "Iran Rial":{
+               "RIC":"IRR=",
+               "topic":"IRR="
+            },
+            "Israel Shekel":{
+               "RIC":"ILS=",
+               "topic":"ILS="
+            },
+            "Japan Yen":{
+               "RIC":"JPY=",
+               "topic":"JPY="
+            },
+            "Malaysia Ringgit":{
+               "RIC":"MYR=",
+               "topic":"MYR="
+            },
+            "Mexico Peso":{
+               "RIC":"MXN=",
+               "topic":"MXN="
+            },
+            "New Zealand dollar":{
+               "RIC":"NZD=",
+               "topic":"NZD="
+            },
+            "Norway Krone":{
+               "RIC":"NOK=",
+               "topic":"NOK="
+            },
+            "Russia Ruble":{
+               "RIC":"RUB=",
+               "topic":"RUB="
+            },
+            "Singapore Dollar":{
+               "RIC":"SGD=",
+               "topic":"SGD="
+            },
+            "South Africa Rand":{
+               "RIC":"ZAR=",
+               "topic":"ZAR="
+            },
+            "South Korea Won":{
+               "RIC":"KRW=",
+               "topic":"KRW="
+            },
+            "Sweden Krona":{
+               "RIC":"SEK=",
+               "topic":"SEK="
+            },
+            "Swiss Franc":{
+               "RIC":"CHF=",
+               "topic":"CHF="
+            },
+            "Taiwan Dollar":{
+               "RIC":"TWD=",
+               "topic":"TWD="
+            },
+            "Thai Baht":{
+               "RIC":"THB=",
+               "topic":"THB="
+            },
+            "Turkey Lira":{
+               "RIC":"TRY=",
+               "topic":"TRY="
+            },
+            "U.S. Dollar":{
+               "RIC":"USD=",
+               "topic":"USD="
+            },
+            "United Arab Emirates Dirham":{
+               "RIC":"AED=",
+               "topic":"AED="
+            },
+            "United Kingdom Pound":{
+               "RIC":"GBP=",
+               "topic":"GBP="
+            }
+         }
+      },
+      {
+         "name":"currencies",
+         "source":"mpsm",
+         "path":"socialmedia/currencies-latest.s.txt",
+         "entitlement_code":"3",
+         "fields":{
+            "Buzz":6,
+            "CarryTradeBuzz":53,
+            "Conflict":22,
+            "CurrencyPegInstability":54,
+            "CurrencyPriceForecast":51,
+            "CurrencyPriceMomentum":56,
+            "Fear":10,
+            "Joy":11,
+            "Optimism":8,
+            "PriceUp":57,
+            "Sentiment":7,
+            "Trust":19,
+            "Uncertainty":25,
+            "Urgency":24,
+            "Violence":21
+         },
+         "items":{
+            "Australian Dollar":{
+               "RIC":"AUD=",
+               "topic":"AUD="
+            },
+            "Brazilian Real":{
+               "RIC":"BRL=",
+               "topic":"BRL="
+            },
+            "Canadian Dollar":{
+               "RIC":"CAD=",
+               "topic":"CAD="
+            },
+            "China Yuan Renminbi":{
+               "RIC":"CNY=",
+               "topic":"CNY="
+            },
+            "Denmark Krone":{
+               "RIC":"DKK=",
+               "topic":"DKK="
+            },
+            "Egypt Pound":{
+               "RIC":"EGP=",
+               "topic":"EGP="
+            },
+            "Euro":{
+               "RIC":"EUR=",
+               "topic":"EUR="
+            },
+            "Hong Kong Dollar":{
+               "RIC":"HKD=",
+               "topic":"HKD="
+            },
+            "India Rupee":{
+               "RIC":"INR=",
+               "topic":"INR="
+            },
+            "Indonesia Rupiah":{
+               "RIC":"IDR=",
+               "topic":"IDR="
+            },
+            "Iran Rial":{
+               "RIC":"IRR=",
+               "topic":"IRR="
+            },
+            "Israel Shekel":{
+               "RIC":"ILS=",
+               "topic":"ILS="
+            },
+            "Japan Yen":{
+               "RIC":"JPY=",
+               "topic":"JPY="
+            },
+            "Malaysia Ringgit":{
+               "RIC":"MYR=",
+               "topic":"MYR="
+            },
+            "Mexico Peso":{
+               "RIC":"MXN=",
+               "topic":"MXN="
+            },
+            "New Zealand dollar":{
+               "RIC":"NZD=",
+               "topic":"NZD="
+            },
+            "Norway Krone":{
+               "RIC":"NOK=",
+               "topic":"NOK="
+            },
+            "Russia Ruble":{
+               "RIC":"RUB=",
+               "topic":"RUB="
+            },
+            "Singapore Dollar":{
+               "RIC":"SGD=",
+               "topic":"SGD="
+            },
+            "South Africa Rand":{
+               "RIC":"ZAR=",
+               "topic":"ZAR="
+            },
+            "South Korea Won":{
+               "RIC":"KRW=",
+               "topic":"KRW="
+            },
+            "Sweden Krona":{
+               "RIC":"SEK=",
+               "topic":"SEK="
+            },
+            "Swiss Franc":{
+               "RIC":"CHF=",
+               "topic":"CHF="
+            },
+            "Taiwan Dollar":{
+               "RIC":"TWD=",
+               "topic":"TWD="
+            },
+            "Thai Baht":{
+               "RIC":"THB=",
+               "topic":"THB="
+            },
+            "Turkey Lira":{
+               "RIC":"TRY=",
+               "topic":"TRY="
+            },
+            "U.S. Dollar":{
+               "RIC":"USD=",
+               "topic":"USD="
+            },
+            "United Arab Emirates Dirham":{
+               "RIC":"AED=",
+               "topic":"AED="
+            },
+            "United Kingdom Pound":{
+               "RIC":"GBP=",
+               "topic":"GBP="
+            }
+         }
+      },
+      {
+         "name":"AG Comm",
+         "source":"mpnews",
+         "path":"news/ag_commodities-latest.n.txt",
+         "entitlement_code":"6",
+         "fields":{
+            "AcreageCultivated":66,
+            "AgDisease":59,
+            "Buzz":6,
+            "Conflict":22,
+            "ConsumptionVolume":67,
+            "Fear":10,
+            "Joy":11,
+            "Optimism":8,
+            "PriceForecast":51,
+            "ProductionVolume":62,
+            "RegulatoryIssues":61,
+            "Sentiment":7,
+            "Subsidies":63,
+            "SubsidiesSentiment":64,
+            "SupplyVsDemandForecast":65,
+            "SurplusVsShortage":58,
+            "Trust":19,
+            "Uncertainty":52,
+            "Urgency":24,
+            "Violence":21,
+            "WeatherDamage":60
+         },
+         "items":{
+            "Cattle":{
+               "RIC":"CATL",
+               "topic":"CATL"
+            },
+            "Cocoa":{
+               "RIC":"COC",
+               "topic":"COC"
+            },
+            "Coffee":{
+               "RIC":"COF",
+               "topic":"COF"
+            },
+            "Corn":{
+               "RIC":"COR",
+               "topic":"COR"
+            },
+            "Cotton":{
+               "RIC":"COT",
+               "topic":"COT"
+            },
+            "Hogs":{
+               "RIC":"HOGS",
+               "topic":"HOGS"
+            },
+            "Orange Juice":{
+               "RIC":"ORJ",
+               "topic":"ORJ"
+            },
+            "Palm Oil":{
+               "RIC":"POIL",
+               "topic":"POIL"
+            },
+            "Rice":{
+               "RIC":"RICE",
+               "topic":"RICE1"
+            },
+            "Soybeans":{
+               "RIC":"SOY",
+               "topic":"SOY1"
+            },
+            "Sugar":{
+               "RIC":"SUG",
+               "topic":"SUG"
+            },
+            "Wheat":{
+               "RIC":"WHT",
+               "topic":"WHT"
+            }
+         }
+      },
+      {
+         "name":"AG Comm",
+         "source":"mpsm",
+         "path":"socialmedia/ag_commodities-latest.s.txt",
+         "entitlement_code":"5",
+         "fields":{
+            "AcreageCultivated":66,
+            "AgDisease":59,
+            "Buzz":6,
+            "Conflict":22,
+            "ConsumptionVolume":67,
+            "Fear":10,
+            "Joy":11,
+            "Optimism":8,
+            "PriceForecast":51,
+            "ProductionVolume":62,
+            "RegulatoryIssues":61,
+            "Sentiment":7,
+            "Subsidies":63,
+            "SubsidiesSentiment":64,
+            "SupplyVsDemandForecast":65,
+            "SurplusVsShortage":58,
+            "Trust":19,
+            "Uncertainty":52,
+            "Urgency":24,
+            "Violence":21,
+            "WeatherDamage":60
+         },
+         "items":{
+            "Cattle":{
+               "RIC":"CATL",
+               "topic":"CATL"
+            },
+            "Cocoa":{
+               "RIC":"COC",
+               "topic":"COC"
+            },
+            "Coffee":{
+               "RIC":"COF",
+               "topic":"COF"
+            },
+            "Corn":{
+               "RIC":"COR",
+               "topic":"COR"
+            },
+            "Cotton":{
+               "RIC":"COT",
+               "topic":"COT"
+            },
+            "Hogs":{
+               "RIC":"HOGS",
+               "topic":"HOGS"
+            },
+            "Orange Juice":{
+               "RIC":"ORJ",
+               "topic":"ORJ"
+            },
+            "Palm Oil":{
+               "RIC":"POIL",
+               "topic":"POIL"
+            },
+            "Rice":{
+               "RIC":"RICE",
+               "topic":"RICE1"
+            },
+            "Soybeans":{
+               "RIC":"SOY",
+               "topic":"SOY1"
+            },
+            "Sugar":{
+               "RIC":"SUG",
+               "topic":"SUG"
+            },
+            "Wheat":{
+               "RIC":"WHT",
+               "topic":"WHT"
+            }
+         }
+      },
+      {
+         "name":"EM Comm",
+         "source":"mpnews",
+         "path":"news/em_commodities-latest.n.txt",
+         "entitlement_code":"8",
+         "fields":{
+            "Buzz":6,
+            "Conflict":22,
+            "ConsumptionVolume":67,
+            "Fear":10,
+            "Joy":11,
+            "NewExploration":70,
+            "Optimism":8,
+            "PriceForecast":51,
+            "PriceInflation":68,
+            "ProductionCost":71,
+            "ProductionVolume":64,
+            "RegulatoryIssues":61,
+            "SafetyAccident":69,
+            "Sentiment":7,
+            "SupplyVsDemandForecast":65,
+            "SurplusVsShortage":58,
+            "Trust":19,
+            "Uncertainty":52,
+            "Urgency":24,
+            "Violence":21
+         },
+         "items":{
+            "Aluminum":{
+               "RIC":"ALU",
+               "topic":"ALU"
+            },
+            "Biofuels":{
+               "RIC":"BIOF",
+               "topic":"BIOF"
+            },
+            "Coal":{
+               "RIC":"COA",
+               "topic":"COA"
+            },
+            "Copper":{
+               "RIC":"CPPR",
+               "topic":"CPPR"
+            },
+            "CrudeOil":{
+               "RIC":"CRU",
+               "topic":"CRU"
+            },
+            "Ethanol":{
+               "RIC":"BIOETH",
+               "topic":"BIO ETH"
+            },
+            "Gasoline":{
+               "RIC":"MOG",
+               "topic":"MOG"
+            },
+            "Gold":{
+               "RIC":"GOL",
+               "topic":"GOL"
+            },
+            "HeatingOil":{
+               "RIC":"HOIL",
+               "topic":"HOIL"
+            },
+            "Iron":{
+               "RIC":"IRN",
+               "topic":"IRN"
+            },
+            "Jet Fuel":{
+               "RIC":"JET",
+               "topic":"JET"
+            },
+            "Liquefied Natural Gas":{
+               "RIC":"LNG",
+               "topic":"LNG"
+            },
+            "Naphtha":{
+               "RIC":"NAP",
+               "topic":"NAP"
+            },
+            "Natural Gas":{
+               "RIC":"NGS",
+               "topic":"NGS"
+            },
+            "Nickel":{
+               "RIC":"NKL",
+               "topic":"NKL"
+            },
+            "North Sea Oil":{
+               "RIC":"NSEA",
+               "topic":"NSEA"
+            },
+            "Palladium":{
+               "RIC":"PALL",
+               "topic":"PALL"
+            },
+            "Platinum":{
+               "RIC":"PLAT",
+               "topic":"PLAT"
+            },
+            "RareEarths":{
+               "RIC":"RAREE",
+               "topic":"RAREE"
+            },
+            "Silver":{
+               "RIC":"SLVR",
+               "topic":"SLVR"
+            },
+            "Steel":{
+               "RIC":"STEE",
+               "topic":"STEE"
+            },
+            "Uranium":{
+               "RIC":"URAN",
+               "topic":"URAN"
+            }
+         }
+      },
+      {
+         "name":"EM Comm",
+         "source":"mpsm",
+         "path":"socialmedia/em_commodities-latest.s.txt",
+         "entitlement_code":"7",
+         "fields":{
+            "Buzz":6,
+            "Conflict":22,
+            "ConsumptionVolume":67,
+            "Fear":10,
+            "Joy":11,
+            "NewExploration":70,
+            "Optimism":8,
+            "PriceForecast":51,
+            "PriceInflation":68,
+            "ProductionCost":71,
+            "ProductionVolume":64,
+            "RegulatoryIssues":61,
+            "SafetyAccident":69,
+            "Sentiment":7,
+            "SupplyVsDemandForecast":65,
+            "SurplusVsShortage":58,
+            "Trust":19,
+            "Uncertainty":52,
+            "Urgency":24,
+            "Violence":21
+         },
+         "items":{
+            "Aluminum":{
+               "RIC":"ALU",
+               "topic":"ALU"
+            },
+            "Biofuels":{
+               "RIC":"BIOF",
+               "topic":"BIOF"
+            },
+            "Coal":{
+               "RIC":"COA",
+               "topic":"COA"
+            },
+            "Copper":{
+               "RIC":"CPPR",
+               "topic":"CPPR"
+            },
+            "CrudeOil":{
+               "RIC":"CRU",
+               "topic":"CRU"
+            },
+            "Ethanol":{
+               "RIC":"BIOETH",
+               "topic":"BIO ETH"
+            },
+            "Gasoline":{
+               "RIC":"MOG",
+               "topic":"MOG"
+            },
+            "Gold":{
+               "RIC":"GOL",
+               "topic":"GOL"
+            },
+            "HeatingOil":{
+               "RIC":"HOIL",
+               "topic":"HOIL"
+            },
+            "Iron":{
+               "RIC":"IRN",
+               "topic":"IRN"
+            },
+            "Jet Fuel":{
+               "RIC":"JET",
+               "topic":"JET"
+            },
+            "Liquefied Natural Gas":{
+               "RIC":"LNG",
+               "topic":"LNG"
+            },
+            "Naphtha":{
+               "RIC":"NAP",
+               "topic":"NAP"
+            },
+            "Natural Gas":{
+               "RIC":"NGS",
+               "topic":"NGS"
+            },
+            "Nickel":{
+               "RIC":"NKL",
+               "topic":"NKL"
+            },
+            "North Sea Oil":{
+               "RIC":"NSEA",
+               "topic":"NSEA"
+            },
+            "Palladium":{
+               "RIC":"PALL",
+               "topic":"PALL"
+            },
+            "Platinum":{
+               "RIC":"PLAT",
+               "topic":"PLAT"
+            },
+            "RareEarths":{
+               "RIC":"RAREE",
+               "topic":"RAREE"
+            },
+            "Silver":{
+               "RIC":"SLVR",
+               "topic":"SLVR"
+            },
+            "Steel":{
+               "RIC":"STEE",
+               "topic":"STEE"
+            },
+            "Uranium":{
+               "RIC":"URAN",
+               "topic":"URAN"
+            }
+         }
+      }
+   ]
+}

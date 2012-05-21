@@ -153,25 +153,41 @@ namespace psych
 	};
 
 	class psych_t :
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 		public vpf::AbstractUserPlugin,
 		public vpf::Command,
+#endif
 		boost::noncopyable
 	{
 	public:
 		psych_t();
 		virtual ~psych_t();
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Plugin entry point. */
-		virtual void init (const vpf::UserPluginConfig& config_);
+		virtual void init (const vpf::UserPluginConfig& config_) override;
+#endif
+
+/* Application entry point. */
+		int run();
+
+/* Core initialization. */
+		bool init();
 
 /* Reset state suitable for recalling init(). */
 		void clear();
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Plugin termination point. */
-		virtual void destroy();
+		virtual void destroy() override;
+#else
+		void destroy();
+#endif
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Tcl entry point. */
-		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		virtual int execute (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData) override;
+#endif
 
 /* Configured period timer entry point. */
 		void processTimer (void* closure);
@@ -187,12 +203,14 @@ namespace psych
 
 		bool get_next_interval (FILETIME* ft);
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
+		int tclPsychRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+		int tclPsychHardRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
+#endif
 		enum {
 			QUERY_HTTP_KEEPALIVE = 1,
 			QUERY_IF_MODIFIED_SINCE
 		};
-		int tclPsychRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
-		int tclPsychHardRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
 		bool httpPsychQuery (std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t>& connections, int flags);
 
 /* Parse libcurl driven HTTP response. */

@@ -139,7 +139,9 @@ namespace
 		}
 	};
 
+#ifndef CONFIG_PSYCH_AS_APPLICATION
 	static factory_t g_factory_instance;
+#endif
 
 } /* anonymous namespace */
 
