@@ -28,16 +28,16 @@
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>
 
-/* Microsoft wrappers */
-#include "microsoft/timer.hh"
+/* Microsoft smart pointer */
+#include "microsoft/unique_handle.hh"
+
+#include "chromium/logging.hh"
 
 #include "config.hh"
 #include "provider.hh"
 
-namespace logging
-{
-namespace rfa
-{
+namespace logging {
+namespace rfa {
 	class LogEventProvider;
 }
 }
@@ -152,7 +152,48 @@ namespace psych
 		std::shared_ptr<rfa::common::EventQueue> event_queue_;
 	};
 
+/* Periodic timer event source */
+	class time_base_t
+	{
+	public:
+		virtual bool processTimer (boost::posix_time::ptime t) = 0;
+	};
+
+	class time_pump_t
+	{
+	public:
+		time_pump_t (boost::posix_time::ptime due_time, boost::posix_time::time_duration td, time_base_t* cb) :
+			due_time_ (due_time),
+			td_ (td),
+			cb_ (cb)
+		{
+			CHECK(nullptr != cb_);
+			if (due_time_.is_not_a_date_time())
+				due_time_ = boost::get_system_time() + td_;
+		}
+
+		void operator()()
+		{
+			try {
+				while (true) {
+					boost::this_thread::sleep (due_time_);
+					if (!cb_->processTimer (due_time_))
+						break;
+					due_time_ += td_;
+				}
+			} catch (boost::thread_interrupted const&) {
+				LOG(INFO) << "Timer thread interrupted.";
+			}
+		}
+
+	private:
+		boost::system_time due_time_;
+		boost::posix_time::time_duration td_;
+		time_base_t* cb_;
+	};
+
 	class psych_t :
+		public time_base_t,
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 		public vpf::AbstractUserPlugin,
 		public vpf::Command,
@@ -190,7 +231,7 @@ namespace psych
 #endif
 
 /* Configured period timer entry point. */
-		void processTimer (void* closure);
+		bool processTimer (boost::posix_time::ptime t) override;
 
 /* Global list of all plugin instances.  AE owns pointer. */
 		static std::list<psych_t*> global_list_;
@@ -201,7 +242,7 @@ namespace psych
 /* Run core event loop. */
 		void mainLoop();
 
-		bool get_next_interval (FILETIME* ft);
+		bool get_next_interval (boost::posix_time::ptime* t);
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 		int tclPsychRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
@@ -272,7 +313,7 @@ namespace psych
 
 /* Event pump and thread. */
 		std::unique_ptr<event_pump_t> event_pump_;
-		std::unique_ptr<boost::thread> thread_;
+		std::unique_ptr<boost::thread> event_thread_;
 
 /* Publish fields. */
 		rfa::data::FieldList fields_;
@@ -283,8 +324,9 @@ namespace psych
 /* libcurl thread safety */
 		static LONG volatile curl_ref_count_;
 
-/* Threadpool timer. */
-		ms::timer timer_;
+/* Thread timer. */
+		std::unique_ptr<time_pump_t> timer_;
+		std::unique_ptr<boost::thread> timer_thread_;
 
 /** Performance Counters. **/
 		boost::posix_time::ptime last_activity_;

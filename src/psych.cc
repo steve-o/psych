@@ -7,7 +7,8 @@
 #define __STDC_FORMAT_MACROS
 #include <cstdint>
 #include <inttypes.h>
-#include <array>
+
+#include <windows.h>
 
 /* Boost Posix Time */
 #include "boost/date_time/gregorian/gregorian_types.hpp"
@@ -102,18 +103,6 @@ double
 psych_round (double x)
 {
 	return (double) psych_mantissa (x) / 1000000.0;
-}
-
-static
-void
-on_timer (
-	PTP_CALLBACK_INSTANCE Instance,
-	PVOID Context,
-	PTP_TIMER Timer
-	)
-{
-	psych::psych_t* psych = static_cast<psych::psych_t*>(Context);
-	psych->processTimer (nullptr);
 }
 
 static
@@ -412,11 +401,6 @@ psych::psych_t::init()
 			stream_vector_.emplace (std::make_pair (*it, name_map));
 		}
 
-/* Microsoft threadpool timer. */
-		timer_.reset (CreateThreadpoolTimer (static_cast<PTP_TIMER_CALLBACK>(on_timer), this /* closure */, nullptr /* env */));
-		if (!(bool)timer_)
-			return false;
-
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			"Severity: \"" << severity_string (e.getSeverity()) << "\""
@@ -436,12 +420,16 @@ psych::psych_t::init()
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* No main loop inside this thread, must spawn new thread for message pump. */
 	event_pump_.reset (new event_pump_t (event_queue_));
-	if (!(bool)event_pump_)
+	if (!(bool)event_pump_) {
+		LOG(ERROR) << "Cannot create event pump.";
 		return false;
+	}
 
-	thread_.reset (new boost::thread (*event_pump_.get()));
-	if (!(bool)thread_)
+	event_thread_.reset (new boost::thread (*event_pump_.get()));
+	if (!(bool)event_thread_) {
+		LOG(ERROR) << "Cannot spawn event thread.";
 		return false;
+	}
 #endif /* CONFIG_PSYCH_AS_APPLICATION */
 
 /* Spawn SNMP implant. */
@@ -461,46 +449,27 @@ psych::psych_t::init()
 
 /* Timer for periodic publishing.
  */
-	FILETIME due_time;
+	using namespace boost;
+	using namespace posix_time;
+
+	ptime due_time;
 	if (!get_next_interval (&due_time)) {
 		LOG(ERROR) << "Cannot calculate next interval.";
 		return false;
 	}
-	const DWORD timer_period = std::stoul (config_.interval) * 1000;
-#if 1
-	SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-	LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
-#else
-/* requires Platform SDK 7.1 */
-	typedef BOOL (WINAPI *SetWaitableTimerExProc)(
-		__in  HANDLE hTimer,
-		__in  const LARGE_INTEGER *lpDueTime,
-		__in  LONG lPeriod,
-		__in  PTIMERAPCROUTINE pfnCompletionRoutine,
-		__in  LPVOID lpArgToCompletionRoutine,
-		__in  PREASON_CONTEXT WakeContext,
-		__in  ULONG TolerableDelay
-	);
-	SetWaitableTimerExProc pFnSetWaitableTimerEx = nullptr;
-	ULONG tolerance = std::stoul (config_.tolerable_delay);
-	REASON_CONTEXT reasonContext = {0};
-	reasonContext.Version = 0;
-	reasonContext.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
-	reasonContext.Reason.SimpleReasonString = L"psychTimer";
-	HMODULE hKernel32Module = GetModuleHandle (_T("kernel32.dll"));
-	BOOL timer_status = false;
-	if (nullptr != hKernel32Module)
-		pFnSetWaitableTimerEx = (SetWaitableTimerExProc) ::GetProcAddress (hKernel32Module, "SetWaitableTimerEx");
-	if (nullptr != pFnSetWaitableTimerEx)
-		timer_status = pFnSetWaitableTimerEx (timer_.get(), &due_time, timer_period, nullptr, nullptr, &reasonContext, tolerance);
-	if (timer_status) {
-		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms, tolerance " << tolerance << "ms";
-	} else {
-		SetThreadpoolTimer (timer_.get(), &due_time, timer_period, 0);
-		LOG(INFO) << "Added periodic timer, interval " << timer_period << "ms";
+	const time_duration td = seconds (std::stoul (config_.interval));
+	timer_.reset (new time_pump_t (due_time, td, this));
+	if (!(bool)timer_) {
+		LOG(ERROR) << "Cannot create time pump.";
+		return false;
 	}
-#endif
-	LOG(INFO) << "Init complete, awaiting queries.";
+	timer_thread_.reset (new boost::thread (*timer_.get()));
+	if (!(bool)timer_thread_) {
+		LOG(ERROR) << "Cannot spawn timer thread.";
+		return false;
+	}
+	LOG(INFO) << "Added periodic timer, interval " << to_simple_string (td)
+			<< ", due time " << to_simple_string (due_time);
 	return true;
 }
 
@@ -528,9 +497,8 @@ psych::psych_t::run()
 	if (!init())
 		return EXIT_FAILURE;
 
-	LOG(INFO) << "Init complete, entering main loop.";
+	LOG(INFO) << "Init complete, Entering main loop.";
 	mainLoop();
-
 	LOG(INFO) << "Main loop terminated.";
 	destroy();
 	return EXIT_SUCCESS;
@@ -589,8 +557,11 @@ void
 psych::psych_t::clear()
 {
 /* Stop generating new events. */
-	if (timer_)
-		SetThreadpoolTimer (timer_.get(), nullptr, 0, 0);
+	if (timer_thread_) {
+		timer_thread_->interrupt();
+		timer_thread_->join();
+	}	
+	timer_thread_.reset();
 	timer_.reset();
 
 /* Close SNMP agent. */
@@ -600,11 +571,11 @@ psych::psych_t::clear()
 	if ((bool)event_queue_)
 		event_queue_->deactivate();
 /* Drain and close event queue. */
-	if ((bool)thread_)
-		thread_->join();
+	if ((bool)event_thread_)
+		event_thread_->join();
 
 /* Release everything with an RFA dependency. */
-	thread_.reset();
+	event_thread_.reset();
 	event_pump_.reset();
 	stream_vector_.clear();
 	assert (provider_.use_count() <= 1);
@@ -842,18 +813,29 @@ uint64_t flexrecord_t::sequence_ = 0;
 
 /* callback from periodic timer.
  */
-void
+bool
 psych::psych_t::processTimer (
-	void*	pClosure
+	boost::posix_time::ptime t
 	)
 {
+/* calculate timer accuracy, typically 15-1ms with default timer resolution.
+ */
+	if (LOG_IS_ON(INFO)) {
+		const boost::posix_time::ptime now (boost::posix_time::microsec_clock::universal_time());
+		const auto ms = (now - t).total_milliseconds();
+		if (0 == ms)
+			LOG(INFO) << "delta " << (now - t).total_microseconds() << "us";
+		else
+			LOG(INFO) << "delta " << ms << "ms";
+	}
+
 	cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED]++;
 
 /* Prevent overlapped queries. */
 	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
 	if (!lock.owns_lock()) {
 		LOG(WARNING) << "Periodic refresh aborted due to running query.";
-		return;
+		return true;
 	}
 
 	try {
@@ -864,16 +846,18 @@ psych::psych_t::processTimer (
 			", Classification: \"" << classification_string (e.getClassification()) << "\""
 			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
 	}
+	return true;
 }
 
 /* Calculate the next bin close timestamp for the requested timezone.
  */
 bool
 psych::psych_t::get_next_interval (
-	FILETIME* ft
+	boost::posix_time::ptime* t
 	)
 {
 	using namespace boost::posix_time;
+
 	const time_duration reference_tod = duration_from_string (config_.time_offset_constant);
 	const int interval_seconds = std::stoi (config_.interval);
 	const ptime now_ptime (second_clock::universal_time());
@@ -893,18 +877,7 @@ psych::psych_t::get_next_interval (
 /* increment to next period */
 	const ptime next_ptime = end_ptime + seconds (interval_seconds);
 
-/* shift is difference between 1970-Jan-01 & 1601-Jan-01 in 100-nanosecond intervals.
- */
-	const uint64_t shift = 116444736000000000ULL; // (27111902 << 32) + 3577643008
-
-	union {
-		FILETIME as_file_time;
-		uint64_t as_integer; // 100-nanos since 1601-Jan-01
-	} caster;
-	caster.as_integer = (next_ptime - ptime (kUnixEpoch)).total_microseconds() * 10; // upconvert to 100-nanos
-	caster.as_integer += shift; // now 100-nanos since 1601-Jan-01
-
-	*ft = caster.as_file_time;
+	*t = next_ptime;
 	return true;
 }
 
@@ -1673,4 +1646,3 @@ psych::psych_t::generatePELock (
 
 
 /* eof */
-

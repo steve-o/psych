@@ -6,9 +6,9 @@ cmake_minimum_required (VERSION 2.8)
 
 project (psych)
 
-set(PSYCH_VERSION_MAJOR 0)
+set(PSYCH_VERSION_MAJOR 1)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 4)
+set(PSYCH_VERSION_BUILD 5)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
@@ -55,11 +55,26 @@ set(RFA_LIBRARIES
         RFA7_Common100_x64.lib
         RFA7_Config100_x64.lib
         RFA7_Logger100_x64.lib
-        DACS7_lock100_x64.lib
         RFA7_Data100_x64.lib
         RFA7_Connections100_x64.lib
         RFA7_Connections_OMM100_x64.lib
         RFA7_SessionLayer100_x64.lib
+        DACS7_lock100_x64.lib
+)
+set(RFA_RUNTIME_LIBRARIES
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/DACS7_lock100_x64.dll
+	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/dacs4wn64.dll
 )
 
 # Boost headers plus built libraries
@@ -229,20 +244,6 @@ else (CONFIG_PSYCH_AS_APPLICATION)
 	)
 endif (CONFIG_PSYCH_AS_APPLICATION)
 
-set(rfa_runtime_libraries
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
-)
-
 if (CONFIG_PSYCH_AS_APPLICATION)
 	set(config
 		${CMAKE_CURRENT_SOURCE_DIR}/config/config.json
@@ -258,7 +259,7 @@ endif (CONFIG_PSYCH_AS_APPLICATION)
 file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
 
 install (TARGETS psych DESTINATION bin)
-install (FILES ${rfa_runtime_libraries} DESTINATION bin)
+install (FILES ${RFA_RUNTIME_LIBRARIES} DESTINATION bin)
 install (FILES ${config} DESTINATION config)
 install (FILES ${mibs} DESTINATION mibs)
 
