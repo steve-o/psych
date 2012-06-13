@@ -293,8 +293,8 @@ namespace psych
 	inline
 	std::ostream& operator<< (std::ostream& o, const config_t& config) {
 		o << "\"config_t\": { "
-			  "\"is_snmp_enabled\": \"" << config.is_snmp_enabled << "\""
-			", \"is_agentx_subagent\": \"" << config.is_agentx_subagent << "\""
+			  "\"is_snmp_enabled\": " << (0 == config.is_snmp_enabled ? "false" : "true") << ""
+			", \"is_agentx_subagent\": " << (0 == config.is_agentx_subagent ? "false" : "true") << ""
 			", \"agentx_socket\": \"" << config.agentx_socket << "\""
 			", \"key\": \"" << config.key << "\""
 			", \"service_name\": \"" << config.service_name << "\""
