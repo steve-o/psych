@@ -45,7 +45,7 @@ set(VHAYU_LIBRARIES
 )
 
 # Thomson Reuters Robust Foundation API
-set(RFA_ROOT C:/rfa7.2.0.L1.win-shared.rrg)
+set(RFA_ROOT D:/rfa7.2.0.L1.win-shared.rrg)
 set(RFA_INCLUDE_DIRS
 	${RFA_ROOT}/Include
 	${RFA_ROOT}/Include/rwf
@@ -78,7 +78,7 @@ set(RFA_RUNTIME_LIBRARIES
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT C:/boost_1_48_0)
+set(BOOST_ROOT D:/boost_1_48_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.44 COMPONENTS thread REQUIRED)

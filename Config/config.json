@@ -1,8 +1,18 @@
 {
-   "is_snmp_enabled":"1",
-   "is_agentx_subagent":"1",
+   "is_snmp_enabled":true,
+   "is_agentx_subagent":true,
    "agentx_socket":"tcp:localhost:705",
+
+// RFA settings
+//
+// Override settings in this file with the Windows registry by setting the key name
+// as a parameter.
+//
+// NB:  RFA will raise an exception and the plugin will terminate if at least one value
+// is not defined underneath the key.
+
    "key":"",
+
    "service_name":"NI_VTA",
    "dacs_id":"307",
    "sessions":[
@@ -44,7 +54,7 @@
          "name":"Equity",
          "source":"mpnews",
          "path":"news/equities-latest.n.txt",
-         "entitlement_code":"2",
+         "entitlement_code":2,
          "fields":{
             "Anger":12,
             "Bubbleometer":27,
@@ -237,7 +247,7 @@
          "name":"Equity",
          "source":"mpsm",
          "path":"socialmedia/equities-latest.s.txt",
-         "entitlement_code":"1",
+         "entitlement_code":1,
          "fields":{
             "Anger":12,
             "Bubbleometer":27,
@@ -430,7 +440,7 @@
          "name":"currencies",
          "source":"mpnews",
          "path":"news/currencies-latest.n.txt",
-         "entitlement_code":"4",
+         "entitlement_code":4,
          "fields":{
             "Buzz":6,
             "CarryTradeBuzz":53,
@@ -571,7 +581,7 @@
          "name":"currencies",
          "source":"mpsm",
          "path":"socialmedia/currencies-latest.s.txt",
-         "entitlement_code":"3",
+         "entitlement_code":3,
          "fields":{
             "Buzz":6,
             "CarryTradeBuzz":53,
@@ -712,7 +722,7 @@
          "name":"AG Comm",
          "source":"mpnews",
          "path":"news/ag_commodities-latest.n.txt",
-         "entitlement_code":"6",
+         "entitlement_code":6,
          "fields":{
             "AcreageCultivated":66,
             "AgDisease":59,
@@ -791,7 +801,7 @@
          "name":"AG Comm",
          "source":"mpsm",
          "path":"socialmedia/ag_commodities-latest.s.txt",
-         "entitlement_code":"5",
+         "entitlement_code":5,
          "fields":{
             "AcreageCultivated":66,
             "AgDisease":59,
@@ -870,7 +880,7 @@
          "name":"EM Comm",
          "source":"mpnews",
          "path":"news/em_commodities-latest.n.txt",
-         "entitlement_code":"8",
+         "entitlement_code":8,
          "fields":{
             "Buzz":6,
             "Conflict":22,
@@ -988,7 +998,7 @@
          "name":"EM Comm",
          "source":"mpsm",
          "path":"socialmedia/em_commodities-latest.s.txt",
-         "entitlement_code":"7",
+         "entitlement_code":7,
          "fields":{
             "Buzz":6,
             "Conflict":22,
