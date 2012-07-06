@@ -486,6 +486,16 @@ psych::psych_t::init()
 int
 psych::psych_t::run()
 {
+	LOG(INFO) << "{ "
+		  "\"version\": \"" << version_major << '.' << version_minor << '.' << version_build << "\""
+		", \"build\": { "
+			  "\"date\": \"" << build_date << "\""
+			", \"time\": \"" << build_time << "\""
+			", \"system\": \"" << build_system << "\""
+			", \"machine\": \"" << build_machine << "\""
+			" }"
+		" }";
+
 	std::unique_ptr<chromium::Value> root;
 	std::string json;
 
