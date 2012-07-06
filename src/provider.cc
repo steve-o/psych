@@ -36,6 +36,7 @@ psych::provider_t::provider_t (
 	) :
 	last_activity_ (boost::posix_time::microsec_clock::universal_time()),
 	config_ (config),
+	rfa_ (rfa),
 	min_rwf_major_version_ (0),
 	min_rwf_minor_version_ (0)
 {
@@ -69,8 +70,7 @@ psych::provider_t::init()
 /* 6.2.2.1 RFA Version Info.  The version is only available if an application
  * has acquired a Session (i.e., the Session Layer library is loaded).
  */
-	LOG(INFO) << "RFA: { productVersion: \"" << rfa::common::Context::getRFAVersionInfo()->getProductVersion() << "\" }";
-	return true;
+	return rfa_->VerifyVersion();
 }
 
 /* Create an item stream for a given symbol name.  The Item Stream maintains

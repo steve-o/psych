@@ -3,7 +3,6 @@
 
 #ifndef __ERROR_HH__
 #define __ERROR_HH__
-
 #pragma once
 
 namespace psych

@@ -115,10 +115,12 @@ std::ostream& operator<< (std::ostream& o, const ::rfa::logger::LoggerNotifyEven
 		"Warning",
 		"Error"
 	};
-	o << "LoggerNotifyEvent: { Severity: \"" << severity[ event_.getSeverity() ] << "\""
-		", Component: \"" << event_.getComponentName() << "\""
-		", LogId: \"" << event_.getLogID() << "\""
-		", Text: \"" << event_.getMessageText() << "\" }";
+	o << "LoggerNotifyEvent: { "
+		  "\"Severity\": \"" << severity[ event_.getSeverity() ] << "\""
+		", \"Component\": \"" << event_.getComponentName() << "\""
+		", \"LogId\": \"" << event_.getLogID() << "\""
+		", \"Text\": \"" << event_.getMessageText() << "\""
+		" }";
 	return o;
 }
 

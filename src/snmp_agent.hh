@@ -3,7 +3,6 @@
 
 #ifndef __SNMP_AGENT_HH__
 #define __SNMP_AGENT_HH__
-
 #pragma once
 
 /* Boost noncopyable base class. */

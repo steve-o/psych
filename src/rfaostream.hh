@@ -3,7 +3,6 @@
 
 #ifndef __RFA_OSTREAM_HH__
 #define __RFA_OSTREAM_HH__
-
 #pragma once
 
 /* RFA 7.2 */
@@ -54,13 +53,13 @@ std::ostream& operator<< (std::ostream& o, const rfa::message::AttribInfo& attri
 	case rdm::INSTRUMENT_NAME_RIC:		name_type = "INSTRUMENT_NAME_RIC"; break;
 	case rdm::INSTRUMENT_NAME_MAX_RESERVED:	name_type = "INSTRUMENT_NAME_MAX_RESERVED"; break;
 	}
-	o << "AttribInfo: { "
-		  "HintMask: \"" << hint_mask.str() << "\""
-		", ID: " << attribInfo.getID() <<
-		", Name: \"" << attribInfo.getName() << "\""
-		", NameType: \"" << name_type << "\""
-		", ServiceID: " << attribInfo.getServiceID() <<
-		", ServiceName: \"" << attribInfo.getServiceName() << "\""
+	o << "\"AttribInfo\": { "
+		  "\"HintMask\": \"" << hint_mask.str() << "\""
+		", \"ID\": " << attribInfo.getID() <<
+		", \"Name\": \"" << attribInfo.getName() << "\""
+		", \"NameType\": \"" << name_type << "\""
+		", \"ServiceID\": " << attribInfo.getServiceID() <<
+		", \"ServiceName\": \"" << attribInfo.getServiceName() << "\""
 		" }";
 	return o;
 }
@@ -83,41 +82,41 @@ std::ostream& operator<< (std::ostream& o, const rfa::message::Manifest& manifes
 		if (!hint_mask.str().empty()) hint_mask << '|';
 		hint_mask << "PermissionDataFlag";
 	}
-	o << "Manifest: { "
-		  "FilteredCount: " << manifest.getFilteredCount() <<
-		", FilteredTime: " << manifest.getFilteredTime() <<
-		", HintMask: \"" << hint_mask.str() << "\""
-		", SeqNum: " << manifest.getSeqNum() <<
+	o << "\"Manifest\": { "
+		  "\"FilteredCount\": " << manifest.getFilteredCount() <<
+		", \"FilteredTime\": " << manifest.getFilteredTime() <<
+		", \"HintMask\": \"" << hint_mask.str() << "\""
+		", \"SeqNum\": " << manifest.getSeqNum() <<
 		" }";
 	return o;
 }
 
 inline
 std::ostream& operator<< (std::ostream& o, const PublisherPrincipalIdentity& identity) {
-	o << "PrincipalIdentity: { "
-		  "Type: \"PublisherPrincipalIdentity\""
-		", UserAddress: \"" << identity.getUserAddress() << "\""
-		", UserID: \"" << identity.getUserID() << "\""
+	o << "\"PrincipalIdentity\": { "
+		  "\"Type\": \"PublisherPrincipalIdentity\""
+		", \"UserAddress\": \"" << identity.getUserAddress() << "\""
+		", \"UserID\": \"" << identity.getUserID() << "\""
 		" }";
 	return o;
 }
 
 inline
 std::ostream& operator<< (std::ostream& o, const StandardPrincipalIdentity& identity) {
-	o << "PrincipalIdentity: { "
-		  "Type: \"StandardPrincipalIdentity\""
-		", AppName: \"" << identity.getAppName() << "\""
-		", Name: \"" << identity.getName() << "\""
-		", Password: \"" << identity.getPassword() << "\""
-		", Position: \"" << identity.getPosition() << "\""
+	o << "\"PrincipalIdentity\": { "
+		  "\"Type\": \"StandardPrincipalIdentity\""
+		", \"AppName\": \"" << identity.getAppName() << "\""
+		", \"Name\": \"" << identity.getName() << "\""
+		", \"Password\": \"" << identity.getPassword() << "\""
+		", \"Position\": \"" << identity.getPosition() << "\""
 		" }";
 	return o;
 }
 
 inline
 std::ostream& operator<< (std::ostream& o, const TokenizedPrincipalIdentity& identity) {
-	o << "PrincipalIdentity: { "
-		   "Type: \"TokenizedPrincipalIdentity\""
+	o << "\"PrincipalIdentity\": { "
+		   "\"Type\": \"TokenizedPrincipalIdentity\""
 		" }";
 	return o;
 }
@@ -136,8 +135,8 @@ std::ostream& operator<< (std::ostream& o, const PrincipalIdentity& identity) {
 		return o;
 	default: break;
 	}
-	o << "PrincipalIdentity: { "
-		   "Type: \"(Unknown)\""
+	o << "\"PrincipalIdentity\": { "
+		   "\"Type\": \"(Unknown)\""
 		" }";
 	return o;
 }
@@ -172,9 +171,9 @@ std::ostream& operator<< (std::ostream& o, const QualityOfService& qos) {
 			timeliness_string = "unspecifiedTimeliness";
 		timeliness_ss << '"' << timeliness_string << '"';
 	}
-	o << "QualityOfService: { "
-		  "Rate: " << rate_ss.str() <<
-		", Timeliness: " << timeliness_ss.str() <<
+	o << "\"QualityOfService\": { "
+		  "\"Rate\": \"" << rate_ss.str() << "\""
+		", \"Timeliness\": \"" << timeliness_ss.str() << "\""
 		" }";
 	return o;
 }
@@ -224,10 +223,11 @@ std::ostream& operator<< (std::ostream& o, const RespStatus& status) {
 	case RespStatus::RedirectedEnum:		stream_state = "RedirectedEnum"; break;
 	default: break;
 	}
-	o << "RespStatus: { "
-		  "DataState: \"" << data_state << "\""
-		", StatusCode: \"" << status_code << "\""
-		", StreamState: " << stream_state << " }";
+	o << "\"RespStatus\": { "
+		  "\"DataState\": \"" << data_state << "\""
+		", \"StatusCode\": \"" << status_code << "\""
+		", \"StreamState\": \"" << stream_state << "\""
+		" }";
 	return o;
 }
 
@@ -303,19 +303,19 @@ std::ostream& operator<< (std::ostream& o, const rfa::message::RespMsg& msg_) {
 	case RespMsg::UpdateEnum:		resp_type = "UpdateEnum"; break;
 	default: break;
 	}
-	o << "Msg: { "
-		  "HintMask: \"" << hint_mask.str() << "\""
-		", IndicationMask: \"" << indication_mask.str() << "\""
-		", MsgModelType, \"" << model_type << "\""
-		", MsgType: \"RespMsg\""
+	o << "\"Msg\": { "
+		  "\"HintMask\": \"" << hint_mask.str() << "\""
+		", \"IndicationMask\": \"" << indication_mask.str() << "\""
+		", \"MsgModelType\": \"" << model_type << "\""
+		", \"MsgType\": \"RespMsg\""
 		", " << msg_.getAttribInfo() <<
 		", " << msg_.getManifest() <<
 		", " << msg_.getPrincipalIdentity() <<
 		", " << msg_.getQualityOfService() <<
 		", " << msg_.getRespStatus() <<
-		", RespType: \"" << resp_type << "\""
-		", RespTypeNum: " << (int)msg_.getRespTypeNum() <<
-		", isBlank: " << msg_.isBlank() <<
+		", \"RespType\": \"" << resp_type << "\""
+		", \"RespTypeNum\": " << (int)msg_.getRespTypeNum() <<
+		", \"isBlank\": " << (msg_.isBlank() ? "true" : "false") <<
 		" }";
 	return o;
 }
@@ -336,22 +336,22 @@ std::ostream& operator<< (std::ostream& o, const Msg& msg_) {
 	case message::AckMsgEnum:	msg_type = "AckMsg"; break;
 	default: break;
 	}
-	o << "Msg: { "
-		  "HintMask: \"" << hint_mask << "\""
-		", IndicationMask: \"" << indication_mask << "\""
-		", MsgModelType, \"" << model_type << "\""
-		", MsgType: \"" << msg_type << "\""
-		", isBlank: " << msg_.isBlank() <<
+	o << "\"Msg\": { "
+		  "\"HintMask\": \"" << hint_mask << "\""
+		", \"IndicationMask\": \"" << indication_mask << "\""
+		", \"MsgModelType\": \"" << model_type << "\""
+		", \"MsgType\": \"" << msg_type << "\""
+		", \"isBlank\": " << (msg_.isBlank() ? "true" : "false") <<
 		" }";
 	return o;
 }
 
 inline
 std::ostream& operator<< (std::ostream& o, const rfa::sessionLayer::OMMItemEvent & event_) {
-	o << "Event: { "
-		  "Type: \"OMMItemEvent\""
+	o << "\"Event\": { "
+		  "\"Type\": \"OMMItemEvent\""
 		", " << event_.getMsg() <<
-		", isEventStreamClosed: " << event_.isEventStreamClosed() <<
+		", \"isEventStreamClosed\": " << (event_.isEventStreamClosed() ? "true" : "false") <<
 		" }";
 	return o;
 }
@@ -393,9 +393,9 @@ std::ostream& operator<< (std::ostream& o, const Event& event_) {
 		type_name = "(Unknown)";
 		break;
 	}
-	o << "Event: { "
-		  "Type: \"" << type_name << "\""
-		", isEventStreamClosed: " << event_.isEventStreamClosed() <<
+	o << "\"Event\": { "
+		  "\"Type\": \"" << type_name << "\""
+		", \"isEventStreamClosed\": " << (event_.isEventStreamClosed() ? "true" : "false") <<
 		" }";
 	return o;
 }

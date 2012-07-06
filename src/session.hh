@@ -3,7 +3,6 @@
 
 #ifndef __SESSION_HH__
 #define __SESSION_HH__
-
 #pragma once
 
 #include <cstdint>

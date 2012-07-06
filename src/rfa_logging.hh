@@ -19,6 +19,7 @@ namespace logging
 {
 namespace rfa
 {
+	namespace internal = ::psych::internal;
 
 	class LogEventProvider :
 		public ::rfa::common::Client,

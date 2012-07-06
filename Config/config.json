@@ -1,6 +1,16 @@
 {
+// SNMP implant settings.
+
    "is_snmp_enabled":true,
+
+// Subagent in Net-SNMP terminology means that this implant will connect to a separate
+// running agent, i.e. snmpd.exe.  Will not interoperate with Microsoft snmp.exe
+
    "is_agentx_subagent":true,
+
+// TREP-VA by default configures snmpd to listen to tcp:<hostname>:705 instead of
+// tcp:localhost:705 for subagent connectivity.
+
    "agentx_socket":"tcp:localhost:705",
 
 // RFA settings
@@ -13,48 +23,192 @@
 
    "key":"",
 
+// TREP-RT service name this plugin provides, compare to IDN_RDF or IDN_SELECTFEED.
+
    "service_name":"NI_VTA",
+
+// Enable DACS lock creation on published item stream.
+
    "dacs_id":"307",
+
+// One or more servers may be listed.  This plugin is a non-interactive provider and uses
+// port 14003 by default compared with interactive providers that usually use port 14002.
+// As a non-interactive provider the TCP connection will be initiated by the plugin and not
+// the ADH, configure firewalls appropriately.
+
    "sessions":[
       {
+
+// RFA session name, one session contains a horizontal scaling set of connections.
+
          "session_name":"SESSIONA",
+
+// RFA connection name, used for logging.
+
          "connection_name":"CONNECTIONA",
+
+// RFA publisher name, used for logging.
+
          "publisher_name":"PUBLISHERA",
+
+// TREP-RT ADH hostname or IP address.
+
          "rssl_servers":[
             "nylabadh2"
          ],
+
+// Default TREP-RT RSSL port, e.g. 14002 (interactive), 14003 (non-interactive).
+
          "rssl_default_port":"14003",
+
+// DACS application Id.  If the server authenticates with DACS, the consumer
+// application may be required to pass in a valid ApplicationId.
+
+// Range: "" (None) or 1-511 as an Ascii string.
+
          "application_id":"256",
+
+// instance_id is used to differentiate applications running on the same host.
+// If there is more than one noninteractive provider instance running on the
+// same host, they must be set as a different value by the provider
+// application. Otherwise, the infrastructure component which the providers
+// connect to will reject a login request that has the same InstanceId value
+
+// and cut the connection.
+// Range: "" (None) or any Ascii string, presumably to maximum RFA_String length.
+
          "instance_id":"Instance1",
+
+// DACS username, frequently non-checked and set to similar: user1.
+
          "user_name":"user1",
+
+// DACS position, the station which the user is using.
+
+// Range: "" (None) or "<IPv4 address>/hostname" or "<IPv4 address>/net"
+
          "position":""
       }
    ],
+
+// RFA application logger monitor name.
+
    "monitor_name":"ApplicationLoggerMonitorName",
+
+// RFA event queue name.
+
    "event_queue_name":"EventQueueName",
+
+// RFA vendor name.
+
    "vendor_name":"Thomson Reuters",
+
+// MarketPsych specific configuration.
+//
+// HTTP poll and publish interval in seconds.
+
    "interval":"60",
-   "tolerable_delay":"",
+
+// Windows timer coalescing tolerable delay.
+
+// At least 32ms, corresponding to two 15.6ms platform timer interrupts.
+
+// Appropriate values are 10% to timer period.
+
+// Specify tolerable delay values and timer periods in multiples of 50 ms.
+
+// http://www.microsoft.com/whdc/system/pnppwr/powermgmt/TimerCoal.mspx
+
+   "tolerable_delay":"0",
+
+// Number of times to retry given a transient error: timeout or HTTP 5xx response.
+
    "retry_count":"3",
+
+// Time period to wait before a retry attempt, in milliseconds.
+
    "retry_delay_ms":"0",
+
+// Maximum time to retry transfer, in seconds.
+
    "retry_timeout_ms":"32000",
+
+// Maximum time for entire operation, in milliseconds.
+
    "timeout_ms":"48000",
+
+// Maximum time for connection phase, in milliseconds.
+
    "connect_timeout_ms":"8000",
+
+// HTTP pipelining disabled by default as frequently broken.
+// Apache supports HTTP pipelining, but most proxies and other servers(tm) don't.
+// http://www.w3.org/Protocols/HTTP/Performance/Pipeline.html
+
    "enable_http_pipelining":"0",
+
+// Responses will be rejected above this size.
+
    "maximum_response_size":"65536",
+
+// Responses will be rejected below this size.
+
    "minimum_response_size":"128",
+
+// HTTP encoding format to request:  "identity", "deflate", "gzip", etc.
+// Default HTTP encoding is "identity".  "deflate" and "gzip" are the same deflate compression scheme
+// with either adler32 or crc32 checksum.  adler32 is a faster checksum.
+
    "request_http_encoding":"deflate",
+
+// Time offset calibration constant to correct a systematic error or bias.
+
+
    "time_offset_constant":"00:00:16.000",
+
+// HTTP provided file modification time clock offset sanity check, 0 disables.
+
+
    "panic_threshold":"1000",
+
+// Optional HTTP proxy for Internet access, beware most proxies do not correctly function with HTTP pipelining.
+
    "http_proxy":"10.65.98.107:8080",
+
+// DNS response cache time in seconds.
+// libcurl defaults caches DNS for 60 seconds, set to zero to disable, set to -1 for a permanent cache.
+// Windows resolver, when enabled, caches positive responses for 86,400 seconds, negative for 900.
+// http://support.microsoft.com/kb/318803
+
    "dns_cache_timeout":"60",
+
+// Base href for all links.
+
    "base_url":"http://trmpmitr:kR39[b$vN4@pipeline2m.velocity.marketpsychdata.com/feed/minutely/",
+
+// "Resources": equities, currencies, commodities, etc.
+
    "resources":[
       {
+
+// for logging
+
          "name":"Equity",
+
+// source feed name, i.e. news or social media
+
          "source":"mpnews",
-         "path":"news/equities-latest.n.txt",
+
+// latest minute feed
+
+         "path":"news/equities-latest.txt",
+
+// DACS numeric entitlement code (PE)
+
          "entitlement_code":2,
+
+// column name to FID mapping
+
          "fields":{
             "Anger":12,
             "Bubbleometer":27,
@@ -80,6 +234,9 @@
             "Violence":21,
             "Volatility":50
          },
+
+// sector to (RIC, topic) mapping
+
          "items":{
             "Agribusiness":{
                "RIC":"MOO.P",
@@ -246,7 +403,7 @@
       {
          "name":"Equity",
          "source":"mpsm",
-         "path":"socialmedia/equities-latest.s.txt",
+         "path":"socialmedia/equities-latest.txt",
          "entitlement_code":1,
          "fields":{
             "Anger":12,
@@ -439,7 +596,7 @@
       {
          "name":"currencies",
          "source":"mpnews",
-         "path":"news/currencies-latest.n.txt",
+         "path":"news/currencies-latest.txt",
          "entitlement_code":4,
          "fields":{
             "Buzz":6,
@@ -580,7 +737,7 @@
       {
          "name":"currencies",
          "source":"mpsm",
-         "path":"socialmedia/currencies-latest.s.txt",
+         "path":"socialmedia/currencies-latest.txt",
          "entitlement_code":3,
          "fields":{
             "Buzz":6,
@@ -721,7 +878,7 @@
       {
          "name":"AG Comm",
          "source":"mpnews",
-         "path":"news/ag_commodities-latest.n.txt",
+         "path":"news/ag_commodities-latest.txt",
          "entitlement_code":6,
          "fields":{
             "AcreageCultivated":66,
@@ -800,7 +957,7 @@
       {
          "name":"AG Comm",
          "source":"mpsm",
-         "path":"socialmedia/ag_commodities-latest.s.txt",
+         "path":"socialmedia/ag_commodities-latest.txt",
          "entitlement_code":5,
          "fields":{
             "AcreageCultivated":66,
@@ -879,7 +1036,7 @@
       {
          "name":"EM Comm",
          "source":"mpnews",
-         "path":"news/em_commodities-latest.n.txt",
+         "path":"news/em_commodities-latest.txt",
          "entitlement_code":8,
          "fields":{
             "Buzz":6,
@@ -997,7 +1154,7 @@
       {
          "name":"EM Comm",
          "source":"mpsm",
-         "path":"socialmedia/em_commodities-latest.s.txt",
+         "path":"socialmedia/em_commodities-latest.txt",
          "entitlement_code":7,
          "fields":{
             "Buzz":6,

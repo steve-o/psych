@@ -2,13 +2,13 @@
 # x64 Windows Server-only
 # 2012/05/02 -- Steven.McCoy@thomsonreuters.com
 
-cmake_minimum_required (VERSION 2.8)
+cmake_minimum_required (VERSION 2.8.8)
 
 project (psych)
 
-set(PSYCH_VERSION_MAJOR 1)
+set(PSYCH_VERSION_MAJOR 2)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 6)
+set(PSYCH_VERSION_BUILD 8)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
@@ -78,10 +78,10 @@ set(RFA_RUNTIME_LIBRARIES
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT D:/boost_1_48_0)
+set(BOOST_ROOT D:/boost_1_50_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
-find_package (Boost 1.44 COMPONENTS thread REQUIRED)
+find_package (Boost 1.50 COMPONENTS chrono thread REQUIRED)
 
 find_package(PythonInterp REQUIRED)
 
@@ -170,6 +170,7 @@ set(cxx-sources
 	src/snmp_agent.cc
 	src/psych.cc
 	src/psychMIB.cc
+	src/tcl.cc
 	src/chromium/chromium_switches.cc
 	src/chromium/command_line.cc
 	src/chromium/debug/stack_trace.cc

@@ -11,7 +11,11 @@
 #include <windows.h>
 
 /* Boost Posix Time */
-#include "boost/date_time/gregorian/gregorian_types.hpp"
+#include <boost/date_time/gregorian/gregorian_types.hpp>
+
+/* Boost Math */
+#include <boost/math/special_functions/fpclassify.hpp>
+#include <boost/math/special_functions/nonfinite_num_facets.hpp>
 
 #include "chromium/file_util.hh"
 #include "chromium/logging.hh"
@@ -24,6 +28,7 @@
 #include "rfa_logging.hh"
 #include "rfaostream.hh"
 #include "version.hh"
+#include "marketpsych.hh"
 
 /* Default to allow up to 6 connections per host. Experiment and tuning may
  * try other values (greater than 0).  See http://crbug.com/12066.
@@ -32,7 +37,7 @@ static const long kMaxSocketsPerHost = 6;
 
 /* MarketPsych content magic number. */
 #define FOURCC(a,b,c,d) ( (uint32_t) (((d)<<24) | ((c)<<16) | ((b)<<8) | (a)) )
-static const uint32_t kPsychMagic (FOURCC ('#', ' ', '2', '0'));
+static const uint32_t kPsychMagic (FOURCC ('#', ' ', 'M', 'a'));
 
 /* Custom user-agent */
 static const char* kHttpUserAgent = "psych/%u.%u.%u";
@@ -52,6 +57,7 @@ static const int kFieldListId = 3;
 static const int kRdmStockRicId		= 1026;
 static const int kRdmSourceFeedNameId	= 1686;
 static const int kRdmTimestampId	= 6378;
+static const int kRdmEngineVersionId    = 8569;
 
 /* FlexRecord Quote identifier. */
 static const uint32_t kQuoteId = 40002;
@@ -74,35 +80,20 @@ LONG volatile psych::psych_t::instance_count_ = 0;
 std::list<psych::psych_t*> psych::psych_t::global_list_;
 boost::shared_mutex psych::psych_t::global_list_lock_;
 
-using rfa::common::RFA_String;
-
 static std::weak_ptr<rfa::common::EventQueue> g_event_queue;
 
-/* Boney M. defined: round half up the river of Babylon.
- */
-static inline
-double
-round_half_up (double x)
-{
-	return floor (x + 0.5);
-}
+using rfa::common::RFA_String;
 
-/* mantissa of 10E6
+/* Convert Posix time to Unix Epoch time.
  */
-static inline
-int64_t
-psych_mantissa (double x)
+template< typename TimeT >
+inline
+TimeT
+to_unix_epoch (
+	const boost::posix_time::ptime t
+	)
 {
-	return (int64_t) round_half_up (x * 1000000.0);
-}
-
-/* round a double value to 6 decimal places using round half up
- */
-static inline
-double
-psych_round (double x)
-{
-	return (double) psych_mantissa (x) / 1000000.0;
+	return (t - boost::posix_time::ptime (kUnixEpoch)).total_seconds();
 }
 
 static
@@ -239,7 +230,7 @@ on_http_data (
 	curl_easy_getinfo (connection->handle.get(), CURLINFO_EFFECTIVE_URL, &effective_url);
 	VLOG(3) << size << 'x' << nmemb << " for: " << effective_url;
 	if ((connection->data.size() + (size * nmemb)) > connection->data.capacity()) {
-		LOG(WARNING) << "Aborting long transfer.";
+		LOG(WARNING) << "Aborting long transfer for " << connection->url;
 		return 0;
 	}
 	connection->data.append (ptr, size * nmemb);
@@ -291,14 +282,15 @@ psych::psych_t::init (
 	plugin_id_.assign (vpf_config.getPluginId());
 	plugin_type_.assign (vpf_config.getPluginType());
 	LOG(INFO) << "{ "
-		  "pluginType: \"" << plugin_type_ << "\""
-		", pluginId: \"" << plugin_id_ << "\""
-		", instance: " << instance_ <<
-		", version: \"" << version_major << '.' << version_minor << '.' << version_build << "\""
-		", build: { date: \"" << build_date << "\""
-			", time: \"" << build_time << "\""
-			", system: \"" << build_system << "\""
-			", machine: \"" << build_machine << "\""
+		  "\"pluginType\": \"" << plugin_type_ << "\""
+		", \"pluginId\": \"" << plugin_id_ << "\""
+		", \"instance\": " << instance_ <<
+		", \"version\": \"" << version_major << '.' << version_minor << '.' << version_build << "\""
+		", \"build\": { "
+			  "\"date\": \"" << build_date << "\""
+			", \"time\": \"" << build_time << "\""
+			", \"system\": \"" << build_system << "\""
+			", \"machine\": \"" << build_machine << "\""
 			" }"
 		" }";
 	
@@ -325,7 +317,9 @@ psych::psych_t::init()
 	if (InterlockedExchangeAdd (&curl_ref_count_, 1L) == 0) {
 		curl_errno = curl_global_init (CURL_GLOBAL_ALL);
 		if (CURLE_OK != curl_errno) {
-			LOG(ERROR) << "curl_global_init failed: { code: " << (int)curl_errno << " }";
+			LOG(ERROR) << "curl_global_init failed: { "
+				"\"code\": " << (int)curl_errno <<
+				" }";
 			return false;
 		}
 	}
@@ -341,15 +335,17 @@ psych::psych_t::init()
 		const long value = std::atol (config_.enable_http_pipelining.c_str());
 		curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_PIPELINING, value);
 		LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_PIPELINING failed: { "
-			"code: " << (int)curl_merrno << ", "
-			"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+			  "\"code\": " << (int)curl_merrno <<
+			", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+			" }";
 	}
 
 /* libcurl 7.16.3: maximum amount of simultaneously open connections that libcurl may cache. */
 	curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_MAXCONNECTS, kMaxSocketsPerHost);
 	LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_MAXCONNECTS failed: { "
-		"code: " << (int)curl_merrno << ", "
-		"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+		  "\"code\": " << (int)curl_merrno <<
+		", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+		" }";
 
 /** RFA initialisation. **/
 	try {
@@ -392,28 +388,39 @@ psych::psych_t::init()
 				it->items.end() != jt;
 				++jt)
 			{
-				auto stream = std::make_shared<broadcast_stream_t> (*it);
-				assert ((bool)stream);
-				if (!provider_->createItemStream (jt->second.first.c_str(), stream))
-					return false;
+				std::shared_ptr<broadcast_stream_t> stream;
+/* RIC may not be unique */
+				auto kt = stream_vector_.find (jt->second.first);
+				if (stream_vector_.end() == kt) {
+					VLOG(1) << "create stream <" << jt->second.first << ">";
+					stream = std::make_shared<broadcast_stream_t> (*it);
+					assert ((bool)stream);
+					if (!provider_->createItemStream (jt->second.first.c_str(), stream))
+						return false;
+					stream_vector_.emplace (std::make_pair (jt->second.first, stream));
+				} else {
+					VLOG(1) << "re-use stream <" << jt->second.first << ">";
+					stream = kt->second;
+				}
+
 				name_map.emplace (std::make_pair (jt->first, std::make_pair (jt->second.second, stream)));
 			}
-			stream_vector_.emplace (std::make_pair (*it, name_map));
+			query_vector_.emplace (std::make_pair (*it, name_map));
 		}
 
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 		return false;
 	} catch (rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\""
-			", ParameterName: \"" << e.getParameterName() << "\""
-			", ParameterValue: \"" << e.getParameterValue() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			", \"ParameterName\": \"" << e.getParameterName() << "\""
+			", \"ParameterValue\": \"" << e.getParameterValue() << "\" }";
 		return false;
 	}
 
@@ -441,35 +448,36 @@ psych::psych_t::init()
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Register Tcl API. */
-	registerCommand (getId(), kBasicFunctionName);
-	LOG(INFO) << "Registered Tcl API \"" << kBasicFunctionName << "\"";
-	registerCommand (getId(), kResetFunctionName);
-	LOG(INFO) << "Registered Tcl API \"" << kResetFunctionName << "\"";
+	if (!register_tcl_api (getId()))
+		return false;
 #endif
 
 /* Timer for periodic publishing.
  */
 	using namespace boost;
-	using namespace posix_time;
-
-	ptime due_time;
+	posix_time::ptime due_time;
 	if (!get_next_interval (&due_time)) {
 		LOG(ERROR) << "Cannot calculate next interval.";
 		return false;
 	}
-	const time_duration td = seconds (std::stoul (config_.interval));
-	timer_.reset (new time_pump_t (due_time, td, this));
+/* convert Boost Posix Time into a Chrono time point */
+	const auto time = to_unix_epoch<std::time_t> (due_time);
+	const auto tp = chrono::system_clock::from_time_t (time);
+
+	const chrono::seconds td (std::stoul (config_.interval));
+	timer_.reset (new time_pump_t<chrono::system_clock> (tp, td, this));
 	if (!(bool)timer_) {
 		LOG(ERROR) << "Cannot create time pump.";
 		return false;
 	}
-	timer_thread_.reset (new boost::thread (*timer_.get()));
+	timer_thread_.reset (new thread (*timer_.get()));
 	if (!(bool)timer_thread_) {
 		LOG(ERROR) << "Cannot spawn timer thread.";
 		return false;
 	}
-	LOG(INFO) << "Added periodic timer, interval " << to_simple_string (td)
-			<< ", due time " << to_simple_string (due_time);
+	LOG(INFO) << "Added periodic timer, interval " << td.count() << " seconds"
+		", offset " << config_.time_offset_constant <<
+		", due time " << posix_time::to_simple_string (due_time);
 	return true;
 }
 
@@ -481,13 +489,19 @@ psych::psych_t::run()
 	std::unique_ptr<chromium::Value> root;
 	std::string json;
 
-	if (!file_util::ReadFileToString (kConfigJson, &json))
+	if (!file_util::ReadFileToString (kConfigJson, &json)) {
+		LOG(ERROR) << "Cannot read configuration file \"" << kConfigJson << "\".";
 		return EXIT_FAILURE;
-{
-	int error_code; std::string error_msg;
-	chromium::Value* v = chromium::JSONReader::ReadAndReturnError (json, false, &error_code, &error_msg);
-	printf ("%d [%s]\n", error_code, error_msg.c_str());
-}
+	}
+/* parse JSON configuration */
+	{
+		int error_code; std::string error_msg;
+		chromium::Value* v = chromium::JSONReader::ReadAndReturnError (json, false, &error_code, &error_msg);
+		if (nullptr == v) {
+			LOG(ERROR) << "Cannot read JSON configuration, error code: " <<
+				error_code << " text: \"" << error_msg << "\".";
+		}
+	}
 	root.reset (chromium::JSONReader::Read (json, false));
 	CHECK (root.get());
 	CHECK (root->IsType (chromium::Value::TYPE_DICTIONARY));
@@ -516,20 +530,20 @@ CtrlHandler (
 	const char* message;
 	switch (fdwCtrlType) {
 	case CTRL_C_EVENT:
-		message = "Caught ctrl-c event, shutting down";
+		message = "Caught ctrl-c event, shutting down.";
 		break;
 	case CTRL_CLOSE_EVENT:
-		message = "Caught close event, shutting down";
+		message = "Caught close event, shutting down.";
 		break;
 	case CTRL_BREAK_EVENT:
-		message = "Caught ctrl-break event, shutting down";
+		message = "Caught ctrl-break event, shutting down.";
 		break;
 	case CTRL_LOGOFF_EVENT:
-		message = "Caught logoff event, shutting down";
+		message = "Caught logoff event, shutting down.";
 		break;
 	case CTRL_SHUTDOWN_EVENT:
 	default:
-		message = "Caught shutdown event, shutting down";
+		message = "Caught shutdown event, shutting down.";
 		break;
 	}
 /* if available, deactivate global event queue pointer to break running loop. */
@@ -578,6 +592,7 @@ psych::psych_t::clear()
 	event_thread_.reset();
 	event_pump_.reset();
 	stream_vector_.clear();
+	query_vector_.clear();
 	assert (provider_.use_count() <= 1);
 	provider_.reset();
 	assert (log_.use_count() <= 1);
@@ -603,15 +618,12 @@ psych::psych_t::destroy()
 	LOG(INFO) << "Closing instance.";
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Unregister Tcl API. */
-	deregisterCommand (getId(), kBasicFunctionName);
-	LOG(INFO) << "Unregistered Tcl API \"" << kBasicFunctionName << "\"";
-	deregisterCommand (getId(), kResetFunctionName);
-	LOG(INFO) << "Unregistered Tcl API \"" << kResetFunctionName << "\"";
+	unregister_tcl_api (getId());
 #endif
 	clear();
 	LOG(INFO) << "Runtime summary: {"
-		    " tclQueryReceived: " << cumulative_stats_[PSYCH_PC_TCL_QUERY_RECEIVED] <<
-		   ", timerQueryReceived: " << cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED] <<
+		    " \"tclQueryReceived\": " << cumulative_stats_[PSYCH_PC_TCL_QUERY_RECEIVED] <<
+		   ", \"timerQueryReceived\": " << cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED] <<
 		" }";
 	LOG(INFO) << "Instance closed.";
 #ifndef CONFIG_PSYCH_AS_APPLICATION
@@ -619,214 +631,24 @@ psych::psych_t::destroy()
 #endif
 }
 
-#ifndef CONFIG_PSYCH_AS_APPLICATION
-/* Tcl boilerplate.
- */
-
-#define Tcl_GetLongFromObj \
-	(tclStubsPtr->PTcl_GetLongFromObj)	/* 39 */
-#define Tcl_GetStringFromObj \
-	(tclStubsPtr->PTcl_GetStringFromObj)	/* 41 */
-#define Tcl_ListObjAppendElement \
-	(tclStubsPtr->PTcl_ListObjAppendElement)/* 44 */
-#define Tcl_ListObjIndex \
-	(tclStubsPtr->PTcl_ListObjIndex)	/* 46 */
-#define Tcl_ListObjLength \
-	(tclStubsPtr->PTcl_ListObjLength)	/* 47 */
-#define Tcl_NewDoubleObj \
-	(tclStubsPtr->PTcl_NewDoubleObj)	/* 51 */
-#define Tcl_NewListObj \
-	(tclStubsPtr->PTcl_NewListObj)		/* 53 */
-#define Tcl_NewStringObj \
-	(tclStubsPtr->PTcl_NewStringObj)	/* 56 */
-#define Tcl_SetResult \
-	(tclStubsPtr->PTcl_SetResult)		/* 232 */
-#define Tcl_SetObjResult \
-	(tclStubsPtr->PTcl_SetObjResult)	/* 235 */
-#define Tcl_WrongNumArgs \
-	(tclStubsPtr->PTcl_WrongNumArgs)	/* 264 */
-
-int
-psych::psych_t::execute (
-	const vpf::CommandInfo& cmdInfo,
-	vpf::TCLCommandData& cmdData
-	)
-{
-	int retval = TCL_ERROR;
-	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
-	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
-	const boost::posix_time::ptime t0 (boost::posix_time::microsec_clock::universal_time());
-	last_activity_ = t0;
-
-	cumulative_stats_[PSYCH_PC_TCL_QUERY_RECEIVED]++;
-
-	try {
-		const char* command = cmdInfo.getCommandName();
-		if (0 == strcmp (command, kBasicFunctionName))
-			retval = tclPsychRepublish (cmdInfo, cmdData);
-		else if  (0 == strcmp (command, kResetFunctionName))
-			retval = tclPsychHardRepublish (cmdInfo, cmdData);
-		else
-			Tcl_SetResult (interp, "unknown function", TCL_STATIC);
-	}
-/* FlexRecord exceptions */
-	catch (const vpf::PluginFrameworkException& e) {
-		/* yay broken Tcl API */
-		Tcl_SetResult (interp, (char*)e.what(), TCL_VOLATILE);
-	}
-	catch (...) {
-		Tcl_SetResult (interp, "Unhandled exception", TCL_STATIC);
-	}
-
-/* Timing */
-	const boost::posix_time::ptime t1 (boost::posix_time::microsec_clock::universal_time());
-	const boost::posix_time::time_duration td = t1 - t0;
-	DLOG(INFO) << "execute complete" << td.total_milliseconds() << "ms";
-	if (td < min_tcl_time_) min_tcl_time_ = td;
-	if (td > max_tcl_time_) max_tcl_time_ = td;
-	total_tcl_time_ += td;
-
-	return retval;
-}
-
-/* psych_republish
- */
-int
-psych::psych_t::tclPsychRepublish (
-	const vpf::CommandInfo& cmdInfo,
-	vpf::TCLCommandData& cmdData
-	)
-{
-	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
-	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
-/* Refresh already running.  Note locking is handled outside query to enable
- * feedback to Tcl interface.
- */
-	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
-	if (!lock.owns_lock()) {
-		Tcl_SetResult (interp, "query already running", TCL_STATIC);
-		return TCL_ERROR;
-	}
-
-/* dup connections map from configuration */
-	std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t> connections;
-	std::for_each (connections_.begin(), connections_.end(),
-		[&connections](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
-	{
-		auto dup_connection = std::make_shared<connection_t> (pair.first, pair.second->url);
-		connections.emplace (std::make_pair (pair.first, dup_connection));
-	});
-
-	httpPsychQuery (connections, QUERY_HTTP_KEEPALIVE);
-	DVLOG(3) << "query complete.";
-
-	connections.clear();
-
-	return TCL_OK;
-}
-
-/* psych_hard_republish
- */
-int
-psych::psych_t::tclPsychHardRepublish (
-	const vpf::CommandInfo& cmdInfo,
-	vpf::TCLCommandData& cmdData
-	)
-{
-	TCLLibPtrs* tclStubsPtr = (TCLLibPtrs*)cmdData.mClientData;
-	Tcl_Interp* interp = cmdData.mInterp;		/* Current interpreter. */
-	boost::unique_lock<boost::shared_mutex> lock (query_mutex_, boost::try_to_lock_t());
-	if (!lock.owns_lock()) {
-		Tcl_SetResult (interp, "query already running", TCL_STATIC);
-		return TCL_ERROR;
-	}
-
-/* dup connections map from configuration */
-	std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t> connections;
-	std::for_each (connections_.begin(), connections_.end(),
-		[&connections](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
-	{
-		auto dup_connection = std::make_shared<connection_t> (pair.first, pair.second->url);
-		connections.emplace (std::make_pair (pair.first, dup_connection));
-	});
-
-	httpPsychQuery (connections, 0);
-	DVLOG(3) << "query complete.";
-
-	return TCL_OK;
-}
-
-#endif /* CONFIG_PSYCH_AS_APPLICATION */
-
-class flexrecord_t {
-public:
-	flexrecord_t (const __time32_t& timestamp, const char* symbol, const char* record)
-	{
-		VHTime vhtime;
-		struct tm tm_time = { 0 };
-		
-		VHTimeProcessor::TTTimeToVH ((__time32_t*)&timestamp, &vhtime);
-		_gmtime32_s (&tm_time, &timestamp);
-
-		stream_ << std::setfill ('0')
-/* 1: timeStamp : t_string : server receipt time, fixed format: YYYYMMDDhhmmss.ttt, e.g. 20120114060928.227 */
-			<< std::setw (4) << 1900 + tm_time.tm_year
-			<< std::setw (2) << 1 + tm_time.tm_mon
-			<< std::setw (2) << tm_time.tm_mday
-			<< std::setw (2) << tm_time.tm_hour
-			<< std::setw (2) << tm_time.tm_min
-			<< std::setw (2) << tm_time.tm_sec
-			<< '.'
-			<< std::setw (3) << 0
-/* 2: eyeCatcher : t_string : @@a */
-			<< ",@@a"
-/* 3: recordType : t_string : FR */
-			   ",FR"
-/* 4: symbol : t_string : e.g. MSFT */
-			   ","
-			<< symbol
-/* 5: defName : t_string : FlexRecord name, e.g. Quote */
-			<< ',' << record
-/* 6: sourceName : t_string : FlexRecord name of base derived record. */
-			<< ","
-/* 7: sequenceID : t_u64 : Sequence number. */
-			   "," << sequence_++
-/* 8: exchTimeStamp : t_VHTime : exchange timestamp */
-			<< ",V" << vhtime
-/* 9: subType : t_s32 : record subtype */
-			<< ","
-/* 10..497: user-defined data fields */
-			   ",";
-	}
-
-	std::string str() { return stream_.str(); }
-	std::ostream& stream() { return stream_; }
-private:
-	std::ostringstream stream_;
-	static uint64_t sequence_;
-};
-
-uint64_t flexrecord_t::sequence_ = 0;
-
-/* http://msdn.microsoft.com/en-us/library/4ey61ayt.aspx */
-#define CTIME_LENGTH	26
-
 /* callback from periodic timer.
  */
 bool
 psych::psych_t::processTimer (
-	boost::posix_time::ptime t
+	const boost::chrono::time_point<boost::chrono::system_clock>& t
 	)
 {
 /* calculate timer accuracy, typically 15-1ms with default timer resolution.
  */
-	if (LOG_IS_ON(INFO)) {
-		const boost::posix_time::ptime now (boost::posix_time::microsec_clock::universal_time());
-		const auto ms = (now - t).total_milliseconds();
-		if (0 == ms)
-			LOG(INFO) << "delta " << (now - t).total_microseconds() << "us";
-		else
-			LOG(INFO) << "delta " << ms << "ms";
+	if (DLOG_IS_ON(INFO)) {
+		using namespace boost::chrono;
+		auto now = system_clock::now();
+		auto ms = duration_cast<milliseconds> (now - t);
+		if (0 == ms.count()) {
+			LOG(INFO) << "delta " << duration_cast<microseconds> (now - t).count() << "us";
+		} else {
+			LOG(INFO) << "delta " << ms.count() << "ms";
+		}
 	}
 
 	cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED]++;
@@ -842,9 +664,9 @@ psych::psych_t::processTimer (
 		httpPsychQuery (connections_, QUERY_HTTP_KEEPALIVE | QUERY_IF_MODIFIED_SINCE);
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			"Severity: \"" << severity_string (e.getSeverity()) << "\""
-			", Classification: \"" << classification_string (e.getClassification()) << "\""
-			", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 	}
 	return true;
 }
@@ -931,102 +753,119 @@ psych::psych_t::httpPsychQuery (
 			connection->data.reserve (maxfilesize);
 			CURLcode curl_errno = curl_easy_setopt (eh, CURLOPT_MAXFILESIZE, maxfilesize);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_MAXFILESIZE failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* target resource */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_URL, connection->url.c_str());
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_URL failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* incoming response header */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_HEADERFUNCTION, on_http_header);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_HEADERFUNCTION failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* incoming response data */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_WRITEFUNCTION, on_http_data);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_WRITEFUNCTION failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* closure for callbacks */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_WRITEHEADER, connection.get());
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_WRITEHEADER failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 			curl_errno = curl_easy_setopt (eh, CURLOPT_WRITEDATA, connection.get());
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_WRITEDATA failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* closure for information queue */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_PRIVATE, connection.get());
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_PRIVATE failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* do not include header in output */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_HEADER, 0L);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_HEADER failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* Fresh connection for hard-refresh.  Socket is left open for re-use. */
 			if (!(flags & QUERY_HTTP_KEEPALIVE)) {
 				curl_errno = curl_easy_setopt (eh, CURLOPT_FRESH_CONNECT, 1L);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_FRESH_CONNECT failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* Connection timeout: minimum 1s when using system name resolver */
 			if (!config_.connect_timeout_ms.empty()) {
 				const long connect_timeout_ms = std::atol (config_.connect_timeout_ms.c_str());
 				curl_errno = curl_easy_setopt (eh, CURLOPT_CONNECTTIMEOUT_MS, connect_timeout_ms);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_CONNECTTIMEOUT_MS failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* Force IPv4 */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_IPRESOLVE, (long)CURL_IPRESOLVE_V4);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_IPRESOLVE failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* Transfer timeout */
 			if (!config_.timeout_ms.empty()) {
 				const long timeout_ms = std::atol (config_.timeout_ms.c_str());
 				curl_errno = curl_easy_setopt (eh, CURLOPT_TIMEOUT_MS, timeout_ms);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_TIMEOUT_MS failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* DNS response cache, in seconds. */
 			if (!config_.dns_cache_timeout.empty()) {
 				const long timeout = std::atol (config_.dns_cache_timeout.c_str());
 				curl_errno = curl_easy_setopt (eh, CURLOPT_DNS_CACHE_TIMEOUT, timeout);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_DNS_CACHE_TIMEOUT failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* Custom user-agent */
 			char user_agent[1024];
 			sprintf_s (user_agent, sizeof (user_agent), kHttpUserAgent, version_major, version_minor, version_build);
 			curl_errno = curl_easy_setopt (eh, CURLOPT_USERAGENT, user_agent);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_USERAGENT failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* Extract file modification time */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_FILETIME, (long)1L);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_FILETIME failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* The If-Modified-Since header */
 			if (flags & QUERY_IF_MODIFIED_SINCE) {
 				curl_errno = curl_easy_setopt (eh, CURLOPT_TIMECONDITION, (long)CURL_TIMECOND_IFMODSINCE);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_TIMECONDITION failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 /* This should be the time in seconds since 1 Jan 1970 GMT as per RFC2616 */
 				const long timevalue = connection->last_filetime;
 				curl_errno = curl_easy_setopt (eh, CURLOPT_TIMEVALUE, timevalue);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_TIMEVALUE failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* Record approximate request timestamp. */
 			connection->request_ptime = t0;
@@ -1035,37 +874,44 @@ psych::psych_t::httpPsychQuery (
 			if (!config_.request_http_encoding.empty()) {
 				curl_errno = curl_easy_setopt (eh, CURLOPT_ACCEPT_ENCODING, config_.request_http_encoding.c_str());
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_ACCEPT_ENCODING failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* HTTP proxy for internal development */
 			if (!config_.http_proxy.empty()) {
 				curl_errno = curl_easy_setopt (eh, CURLOPT_PROXY, config_.http_proxy.c_str());
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_PROXY failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 /* buffer for text form of error codes */
 			curl_errno = curl_easy_setopt (eh, CURLOPT_ERRORBUFFER, connection->error);
 			LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_ERRORBUFFER failed: { "
-				"code: " << (int)curl_errno << ", "
-				"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+				  "\"code\": " << (int)curl_errno <<
+				", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+				" }";
 /* debug mode */
 			if (VLOG_IS_ON (10)) {
 				curl_errno = curl_easy_setopt (eh, CURLOPT_VERBOSE, 1L);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_VERBOSE failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 				curl_errno = curl_easy_setopt (eh, CURLOPT_DEBUGFUNCTION, on_http_trace);
 				LOG_IF(WARNING, CURLE_OK != curl_errno) << "CURLOPT_DEBUGFUNCTION failed: { "
-					"code: " << (int)curl_errno << ", "
-					"text: \"" << curl_easy_strerror (curl_errno) << "\" }";
+					  "\"code\": " << (int)curl_errno <<
+					", \"text\": \"" << curl_easy_strerror (curl_errno) << "\""
+					" }";
 			}
 
 			CURLMcode curl_merrno = curl_multi_add_handle (multipass_.get(), eh);
 			LOG_IF(ERROR, CURLM_OK != curl_merrno) << "curl_multi_add_handle failed: { "
-				"code: " << (int)curl_merrno << ", "
-				"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+				  "\"url\": \"" << connection->url << "\""
+				", \"code\": " << (int)curl_merrno <<
+				", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+				" }";
 		});
 
 		int running_handles = 0;
@@ -1073,8 +919,9 @@ psych::psych_t::httpPsychQuery (
 		VLOG(3) << "perform";
 		CURLMcode curl_merrno = curl_multi_perform (multipass_.get(), &running_handles);
 		LOG_IF(ERROR, CURLM_OK != curl_merrno && CURLM_CALL_MULTI_PERFORM != curl_merrno) << "curl_multi_perform failed: { "
-			"code: " << (int)curl_merrno << ", "
-			"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+			  "\"code\": " << (int)curl_merrno <<
+			", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+			" }";
 
 		cumulative_stats_[PSYCH_PC_HTTP_REQUEST_SENT] += pending.size();
 
@@ -1084,8 +931,9 @@ psych::psych_t::httpPsychQuery (
 			while (CURLM_CALL_MULTI_PERFORM == curl_merrno)
 				curl_merrno = curl_multi_perform (multipass_.get(), &running_handles);
 			LOG_IF(ERROR, CURLM_OK != curl_merrno) << "curl_multi_perform failed: { "
-				"code: " << (int)curl_merrno << ", "
-				"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+				  "\"code\": " << (int)curl_merrno <<
+				", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+				" }";
 			if (0 == running_handles)
 				break;
 
@@ -1098,12 +946,14 @@ psych::psych_t::httpPsychQuery (
 
 			curl_merrno = curl_multi_fdset (multipass_.get(), &readfds, &writefds, &exceptfds, &max_fd);
 			LOG_IF(ERROR, CURLM_OK != curl_merrno && CURLM_CALL_MULTI_PERFORM != curl_merrno) << "curl_multi_fdset failed: { "
-				"code: " << (int)curl_merrno << ", "
-				"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+				  "\"code\": " << (int)curl_merrno <<
+				", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+				" }";
 			curl_merrno = curl_multi_timeout (multipass_.get(), &timeout);
 			LOG_IF(ERROR, CURLM_OK != curl_merrno && CURLM_CALL_MULTI_PERFORM != curl_merrno) << "curl_multi_timeout failed: { "
-				"code: " << (int)curl_merrno << ", "
-				"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+				  "\"code\": " << (int)curl_merrno <<
+				", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+				" }";
 
 			if (-1 == max_fd || -1 == timeout) { /* not monitorable state */
 				Sleep (100);	/* recommended 100ms wait */
@@ -1118,6 +968,7 @@ psych::psych_t::httpPsychQuery (
 		}
 
 		VLOG(2) << "curl result processing.";
+		std::string engine_version;
 		ptime open_time, close_time;
 		std::vector<std::string> columns;
 		std::vector<std::pair<std::string, std::vector<double>>> rows;
@@ -1126,30 +977,33 @@ psych::psych_t::httpPsychQuery (
 		CURLMsg* msg = curl_multi_info_read (multipass_.get(), &msgs_in_queue);
 		while (nullptr != msg) {
 			VLOG(3) << "result: { "
-				"msg: " << msg->msg << ", "
-				"code: " << msg->data.result << ", "
-				"text: \"" << curl_easy_strerror (msg->data.result) << "\" }";
+				  "\"msg\": " << msg->msg <<
+				", \"code\": " << msg->data.result <<
+				", \"text\": \"" << curl_easy_strerror (msg->data.result) << "\""
+				" }";
 			if (CURLMSG_DONE == msg->msg) {
 				void* ptr;
 				curl_easy_getinfo (msg->easy_handle, CURLINFO_PRIVATE, &ptr);
 				auto connection = static_cast<connection_t*> (ptr);
 				open_time = close_time = not_a_date_time;
 				columns.clear(); rows.clear();
-				if (processHttpResponse (connection, &open_time, &close_time, &columns, &rows))
+				if (processHttpResponse (connection, &engine_version, &open_time, &close_time, &columns, &rows))
 				{
 					try {
-						sendRefresh (connection->resource, open_time, close_time, columns, rows);
+						sendRefresh (connection->resource, engine_version, open_time, close_time, columns, rows);
 					} catch (rfa::common::InvalidUsageException& e) {
 						LOG(ERROR) << "InvalidUsageException: { "
-							  "Severity: \"" << severity_string (e.getSeverity()) << "\""
-							", Classification: \"" << classification_string (e.getClassification()) << "\""
-							", StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+							  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
+							", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+							", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+							" }";
 					}
 /* ignoring RFA, request is now considered successful */
 					const CURLMcode curl_merrno = curl_multi_remove_handle (multipass_.get(), connection->handle.get());
 					LOG_IF(ERROR, CURLM_OK != curl_merrno) << "curl_multi_remove_handle failed: { "
-						"code: " << (int)curl_merrno << ", "
-						"text: \"" << curl_multi_strerror (curl_merrno) << "\" }";
+						  "\"code\": " << (int)curl_merrno <<
+						", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+						" }";
 /* remove from pending queue */
 					pending.erase (std::remove_if (pending.begin(),
 						pending.end(),
@@ -1214,6 +1068,7 @@ psych::psych_t::httpPsychQuery (
 bool
 psych::psych_t::processHttpResponse (
 	connection_t* connection,
+	std::string* engine_version,
 	boost::posix_time::ptime* open_time,
 	boost::posix_time::ptime* close_time,
 	std::vector<std::string>* columns,
@@ -1239,13 +1094,13 @@ psych::psych_t::processHttpResponse (
 
 /* dump HTTP-decoded content */
 	VLOG(4) << "HTTP: { "
-			  "url: \"" << effective_url << "\""
-			", status: " << response_code <<
-			", type: \"" << content_type << "\""
-			", size: " << size_download <<
-			", content: " << connection->data.size() <<
-			", time: " << total_time <<
-			", latency: " << starttransfer_time <<
+			  "\"url\": \"" << effective_url << "\""
+			", \"status\": " << response_code <<
+			", \"type\": \"" << content_type << "\""
+			", \"size\": " << size_download <<
+			", \"content\": " << connection->data.size() <<
+			", \"time\": " << total_time <<
+			", \"latency\": " << starttransfer_time <<
 			" }";
 	VLOG(5) << "payload: " << connection->data;
 
@@ -1264,7 +1119,7 @@ psych::psych_t::processHttpResponse (
 			cumulative_stats_[PSYCH_PC_HTTP_5XX_RECEIVED]++;
 		if (304 == response_code)
 			cumulative_stats_[PSYCH_PC_HTTP_304_RECEIVED]++;
-		LOG(WARNING) << "Aborted HTTP transfer on status code: " << response_code << ".";
+		LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on status code: " << response_code << ".";
 		return false;
 	}
 
@@ -1272,14 +1127,14 @@ psych::psych_t::processHttpResponse (
 	cumulative_stats_[PSYCH_PC_HTTP_2XX_RECEIVED]++;
 
 	if (0 != strncmp (content_type, "text/plain", strlen ("text/plain"))) {
-		LOG(WARNING) << "Aborted HTTP transfer on content-type: \"" << content_type << "\".";
+		LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on content-type: \"" << content_type << "\".";
 		return false;
 	}
 
 	const long minimum_response_size = !config_.minimum_response_size.empty() ? std::atol (config_.minimum_response_size.c_str()) : sizeof (uint32_t);
 	assert (minimum_response_size > sizeof (uint32_t));
 	if (connection->data.size() < minimum_response_size) {
-		LOG(WARNING) << "Aborted HTTP transfer on content size: " << connection->data.size() << ".";
+		LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on content size: " << connection->data.size() << " less than configured minimum response size of " << minimum_response_size << " bytes.";
 		return false;
 	}
 
@@ -1287,7 +1142,7 @@ psych::psych_t::processHttpResponse (
 	const char* cdata = connection->data.c_str();
 	const uint32_t magic (FOURCC (cdata[0], cdata[1], cdata[2], cdata[3]));
 	if (kPsychMagic != magic) {
-		LOG(WARNING) << "Aborted HTTP transfer on payload magic number: " << std::hex << std::showbase << magic << ".";
+		LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on payload magic number: " << std::hex << std::showbase << magic << ".";
 		return false;
 	}
 
@@ -1309,7 +1164,7 @@ psych::psych_t::processHttpResponse (
 		cumulative_stats_[PSYCH_PC_HTTP_CLOCK_DRIFT] = http_offset = filetime - request_filetime;
 		if (!config_.panic_threshold.empty()) {
 			if (labs (http_offset) >= std::atol (config_.panic_threshold.c_str())) {
-				LOG(WARNING) << "Aborted HTTP transfer on filetime clock offset " << http_offset << " seconds breaching panic threshold " << config_.panic_threshold << ".";
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on filetime clock offset " << http_offset << " seconds breaching panic threshold " << config_.panic_threshold << ".";
 				return false;
 			}
 		}
@@ -1322,20 +1177,48 @@ psych::psych_t::processHttpResponse (
 
 	while (t.GetNext()) {
 		if (STATE_TIMESTAMP == state) {
-/* # 2012-05-02 21:19:00 UTC - 2012-05-03 21:19:00 UTC */
+/* # MarketPsych Engine Version x.y | 2012-05-02 21:19:00 UTC - 2012-05-03 21:19:00 UTC */
 			const auto& token = t.token();
-			if (token.size() != strlen ("# 2012-05-02 21:19:00 UTC - 2012-05-03 21:19:00 UTC")) {
-				LOG(WARNING) << "Aborted HTTP transfer on malformed data.";
+			if (token.size() < strlen ("# MarketPsych Engine Version 0 | 2012-05-02 21:19:00 UTC - 2012-05-03 21:19:00 UTC")) {
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed header \"" << token << "\".";
 				return false;
 			}
-			*open_time = boost::posix_time::time_from_string (token.substr (
-				strlen ("# "),
-				strlen ("2012-05-02 21:19:00")));
-			*close_time = boost::posix_time::time_from_string (token.substr (
-				strlen ("# 2012-05-02 21:19:00 UTC - "),
-				strlen ("2012-05-03 21:19:00")));
+
+			static const size_t prefix_len = strlen ("# MarketPsych Engine Version ");
+			static const size_t date_len   = strlen ("2012-05-02 21:19:00");
+
+			const auto space_after_version = token.find (" ", prefix_len);
+			if (std::string::npos == space_after_version) {
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed header \"" << token << "\".";
+				return false;
+			}
+			*engine_version = token.substr (prefix_len, space_after_version - prefix_len);
+
+			const auto pipe_delimiter = token.find ("| ", space_after_version);
+			if (std::string::npos == pipe_delimiter) {
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed header \"" << token << "\".";
+				return false;
+			}
+			const auto open_time_string = token.substr (pipe_delimiter + strlen ("| "), date_len);
+			try {
+				*open_time = boost::posix_time::time_from_string (open_time_string);
+			} catch (const std::exception& e) {
+				LOG(WARNING) << "Caught exception parsing open time \"" << open_time_string << "\": " << e.what();
+			}
+
+			const auto hyphen_delimiter = token.find ("- ", pipe_delimiter);
+			if (std::string::npos == hyphen_delimiter) {
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed header \"" << token << "\".";
+				return false;
+			}
+			const auto close_time_string = token.substr (hyphen_delimiter + strlen ("- "), date_len);
+			try {
+				*close_time = boost::posix_time::time_from_string (close_time_string);
+			} catch (const std::exception& e) {
+				LOG(WARNING) << "Caught exception parsing close time \"" << close_time_string << "\": " << e.what();
+			}
 			if (open_time->is_not_a_date_time() || close_time->is_not_a_date_time()) {
-				LOG(WARNING) << "Aborted HTTP transfer on malformed data.";
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed header \"" << token << "\".";
 				return false;
 			}
 			state = STATE_HEADER;
@@ -1343,11 +1226,11 @@ psych::psych_t::processHttpResponse (
 /* Sector  Buzz    Sentiment...                        */
 			chromium::SplitString (t.token(), '\t', columns);
 			if (columns->empty()) {
-				LOG(WARNING) << "Aborted HTTP transfer on malformed data.";
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed table header \"" << t.token() << "\".";
 				return false;
 			}
 			if (columns->size() < 2) {
-				LOG(WARNING) << "Aborted HTTP transfer on malformed data.";
+				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed table header \"" << t.token() << "\".";
 				return false;
 			}
 			state = STATE_ROW;
@@ -1360,27 +1243,42 @@ psych::psych_t::processHttpResponse (
 			std::vector<std::string> row_text;
 			chromium::SplitString (t.token(), '\t', &row_text);
 			if (row_text.size() != columns->size()) {
-				LOG(WARNING) << "Aborted HTTP transfer on malformed data.";
-				return false;
+				LOG(WARNING) << "Partial HTTP transfer " << connection->url << " on malformed table data \"" << t.token() << "\".";
+				continue;
 			}
-/* std:atof()
- * If the converted value falls out of range of the return type, the return value is undefined.
+/* C++98 does not define infinity or NaN for text streams:
+ * http://www.boost.org/doc/libs/1_47_0/libs/math/doc/sf_and_dist/html/math_toolkit/utils/fp_facets/intro.html
  */
+			std::locale new_locale(std::locale(std::locale(std::locale(), new boost::math::nonfinite_num_put<char>), new boost::math::nonfinite_num_get<char>));
 			std::vector<double> row_double;
 			for (size_t i = 1; i < row_text.size(); ++i) {
+				std::stringstream ss;
+				ss.imbue (new_locale);
+				ss << row_text[i];
+				double f;
+				ss >> f;
+#if 0
 /* std::strtod()
- * If the converted value falls out of range of corresponding return type, range error occurs and HUGE_VAL, HUGE_VALF or HUGE_VALL is returned.
+ * If the converted value falls out of range of corresponding return type, range error occurs and HUGE_VAL is returned.
  */
 				double f = std::strtod (row_text[i].c_str(), nullptr);
 				if (HUGE_VAL == f || -HUGE_VAL == f) {
-					LOG(WARNING) << "Aborted HTTP transfer on overflow: { "
-						"overflow: \"" << ((HUGE_VAL == f) ? "HUGE_VAL" : "-HUGE_VAL") << "\", "
-						"row: " << (1 + row_double.size()) << ", "
-						"column: \"" << (*columns)[i] << "\", "
-						"text: \"" << row_text[i] << "\" "
-						"}";
-					return false;
+					LOG(WARNING) << "Partial HTTP transfer " << connection->url << " on overflow: { "
+						  "\"overflow\": \"" << ((HUGE_VAL == f) ? "HUGE_VAL" : "-HUGE_VAL") << "\""
+						", \"row\": " << (1 + row_double.size()) <<
+						", \"column\": \"" << (*columns)[i] << "\""
+						", \"text\": \"" << row_text[i] << "\""
+						" }";
+/* normalize to limits */
+#ifdef max
+#	undef max
+#endif
+					if (HUGE_VAL == f)
+						f = std::numeric_limits<double>::max();
+					else if (-HUGE_VAL == f)
+						f = std::numeric_limits<double>::lowest();
 				}
+#endif
 				row_double.emplace_back (f);
 			}
 			rows->emplace_back (std::make_pair (row_text[0], row_double));
@@ -1397,40 +1295,41 @@ psych::psych_t::processHttpResponse (
 
 	VLOG(3) << "Parsing complete.";
 
-{
+	if (LOG_IS_ON(INFO)) {
 		using namespace boost::posix_time;
 		const ptime file_ptime = from_time_t (filetime);
 		LOG(INFO) << "Timing: { "
-			  "httpd_offset: " << httpd_offset <<
-			", http_offset: " << http_offset <<
-			", psych_offset: " << psych_offset <<
-			", request_time: \"" << to_simple_string (connection->request_ptime) << "\""
-			", httpd_time: \"" << to_simple_string (connection->httpd_ptime) << "\""
-			", filetime: \"" << to_simple_string (file_ptime) << "\""
-			", open: " << to_simple_string (*open_time) << "\""
-			", close: \"" << to_simple_string (*close_time) << "\""
+			  "\"httpd_offset\": " << httpd_offset <<
+			", \"http_offset\": " << http_offset <<
+			", \"psych_offset\": " << psych_offset <<
+			", \"request_time\": \"" << to_simple_string (connection->request_ptime) << "\""
+			", \"httpd_time\": \"" << to_simple_string (connection->httpd_ptime) << "\""
+			", \"filetime\": \"" << to_simple_string (file_ptime) << "\""
+			", \"open\": \"" << to_simple_string (*open_time) << "\""
+			", \"close\": \"" << to_simple_string (*close_time) << "\""
 			" }";
-}
+	}
 
 /* dump decoded time details */
 	if (VLOG_IS_ON(4)) {
 		using namespace boost::posix_time;
 		const ptime file_ptime = from_time_t (filetime);
 		VLOG(4) << "Timing: { "
-			  "request_time: \"" << to_simple_string (connection->request_ptime) << "\""
-			", httpd_time: \"" << to_simple_string (connection->httpd_ptime) << "\""
-			", filetime: \"" << to_simple_string (file_ptime) << "\""
-			", open: " << to_simple_string (*open_time) << "\""
-			", close: \"" << to_simple_string (*close_time) << "\""
+			  "\"request_time\": \"" << to_simple_string (connection->request_ptime) << "\""
+			", \"httpd_time\": \"" << to_simple_string (connection->httpd_ptime) << "\""
+			", \"filetime\": \"" << to_simple_string (file_ptime) << "\""
+			", \"open\": \"" << to_simple_string (*open_time) << "\""
+			", \"close\": \"" << to_simple_string (*close_time) << "\""
 			" }";
 	}
 
-	return sendRefresh (connection->resource, *open_time, *close_time, *columns, *rows);
+	return true;
 }
 
 bool
 psych::psych_t::sendRefresh (
 	const psych::resource_t& resource,
+	const std::string& engine_version,
 	const boost::posix_time::ptime& open_time,
 	const boost::posix_time::ptime& close_time,
 	const std::vector<std::string>& columns,
@@ -1476,8 +1375,8 @@ psych::psych_t::sendRefresh (
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
 	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timestamp_field (false), price_field (false);
-	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timestamp_data (false), price_data (false);
+	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timestamp_field (false), price_field (false), engine_field (false);
+	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timestamp_data (false), price_data (false), engine_data (false);
 	rfa::data::Real64 real64;
 	struct tm _tm;
 
@@ -1492,6 +1391,15 @@ psych::psych_t::sendRefresh (
 	const RFA_String sf_name (resource.source.c_str(), 0, false);
 	sf_name_data.setFromString (sf_name, rfa::data::DataBuffer::StringRMTESEnum);
 	sf_name_field.setData (sf_name_data);
+	VLOG(3) << "source feed name: " << resource.source;
+
+/* ENGINE_VER
+ */
+	engine_field.setFieldID (kRdmEngineVersionId);
+	const RFA_String engine (engine_version.c_str(), 0, false);
+	engine_data.setFromString (engine, rfa::data::DataBuffer::StringRMTESEnum);
+	engine_field.setData (engine_data);
+	VLOG(3) << "engine version: " << engine_version;
 
 /* TIMESTAMP: ISO 8601 format, UTC: YYYY-MM-DD hh:mm:ss.sss
  */
@@ -1516,6 +1424,7 @@ psych::psych_t::sendRefresh (
 	const RFA_String timestamp (ss.str().c_str(), 0, true);
 	timestamp_data.setFromString (timestamp, rfa::data::DataBuffer::StringRMTESEnum);
 	timestamp_field.setData (timestamp_data);
+	VLOG(3) << "timestamp: " << ss.str();
 
 /* HIGH_1, LOW_1 as PRICE field type */
 	real64.setMagnitudeType (rfa::data::ExponentNeg6);
@@ -1531,9 +1440,8 @@ psych::psych_t::sendRefresh (
 	status.setStatusCode (rfa::common::RespStatus::NoneEnum);
 	response.setRespStatus (status);
 
-	auto& name_map = stream_vector_[resource];
-	std::for_each (rows.begin(), rows.end(),
-		[&](std::pair<std::string, std::vector<double>> row)
+	auto& name_map = query_vector_[resource];
+	std::for_each (rows.begin(), rows.end(), [&](std::pair<std::string, std::vector<double>> row)
 	{
 /* row may not exist in map */
 		auto jt = name_map.find (row.first);
@@ -1544,7 +1452,6 @@ psych::psych_t::sendRefresh (
 		auto& stream = jt->second.second;
 
 		VLOG(2) << "Publishing to stream " << stream->rfa_name;
-
 		attribInfo.setName (stream->rfa_name);
 		it.start (fields_);
 /* STOCK_RIC */
@@ -1553,13 +1460,14 @@ psych::psych_t::sendRefresh (
 		it.bind (stock_ric_field);
 /* SF_NAME */
 		it.bind (sf_name_field);
+/* ENGINE_VER */
+		it.bind (engine_field);
 /* TIMESTAMP */
 		it.bind (timestamp_field);
 
 /* map each column data to a TREP-RT FID */
 		size_t column_idx = 0;
-		std::for_each (columns.begin(), columns.end(),
-			[&](std::string column)
+		std::for_each (columns.begin(), columns.end(), [&](std::string column)
 		{
 			const auto kt = resource.fields.find (column);
 			if (resource.fields.end() == kt) {
@@ -1567,8 +1475,16 @@ psych::psych_t::sendRefresh (
 				return;
 			}
 			price_field.setFieldID (kt->second);
-			const int64_t mantissa = psych_mantissa (row.second[column_idx]);
-			real64.setValue (mantissa);		
+			if (boost::math::isnan (row.second[column_idx])) {
+				price_data.setBlankData (rfa::data::DataBuffer::Real64Enum);
+				price_field.setData (price_data);
+				VLOG(4) << column << "(" << kt->second << "): <blank>";
+			} else {
+				real64.setValue (marketpsych::mantissa (row.second[column_idx]));
+				price_data.setReal64 (real64);
+				price_field.setData (price_data);
+				VLOG(4) << column << "(" << kt->second << "): " << row.second[column_idx];
+			}
 			it.bind (price_field);
 			++column_idx;
 		});
@@ -1598,7 +1514,9 @@ psych::psych_t::sendRefresh (
 		RFA_String warningText;
 		const uint8_t validation_status = response.validateMsg (&warningText);
 		if (rfa::message::MsgValidationWarning == validation_status) {
-			LOG(ERROR) << "respMsg::validateMsg: { warningText: \"" << warningText << "\" }";
+			LOG(ERROR) << "respMsg::validateMsg: { "
+				"\"warningText\": \"" << warningText << "\""
+				"}";
 		} else {
 			assert (rfa::message::MsgValidationOk == validation_status);
 		}
@@ -1637,7 +1555,9 @@ psych::psych_t::generatePELock (
 	AuthorizationLockData::LockResult result = authLock.getLock (lockData, retStatus);
 
 	if (AuthorizationLockData::LOCK_SUCCESS != result) {
-		LOG(ERROR) << "authLock.getLock: { statusText: \"" << retStatus.getStatusText() << "\" }";
+		LOG(ERROR) << "authLock.getLock: { "
+			"\"statusText\": \"" << retStatus.getStatusText() << "\""
+			" }";
 		return false;
 	}
 	buf->setFrom (lockData.c_lockData(), lockData.size(), lockData.size());

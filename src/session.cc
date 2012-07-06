@@ -151,7 +151,9 @@ psych::session_t::sendLoginRequest()
 	RFA_String warningText;
 	const uint8_t validation_status = request.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
-		LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { warningText: \"" << warningText << "\" }";
+		LOG(WARNING) << prefix_ << "MMT_LOGIN::validateMsg: { "
+			"\"warningText\": \"" << warningText << "\""
+			" }";
 		cumulative_stats_[SESSION_PC_MMT_LOGIN_MALFORMED]++;
 	} else {
 		assert (rfa::message::MsgValidationOk == validation_status);
@@ -182,16 +184,20 @@ psych::session_t::sendLoginRequest()
 	if (provider_.min_rwf_major_version_ == 0 &&
 	    provider_.min_rwf_minor_version_ == 0)
 	{
-		LOG(INFO) << prefix_ << "RWF: { MajorVersion: " << (unsigned)rwf_major_version_ <<
-					     ", MinorVersion: " << (unsigned)rwf_minor_version_ << " }";
+		LOG(INFO) << prefix_ << "RWF: { "
+					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
+					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					" }";
 		provider_.min_rwf_major_version_ = rwf_major_version_;
 		provider_.min_rwf_minor_version_ = rwf_minor_version_;
 	}
 	if (((provider_.min_rwf_major_version_ == rwf_major_version_ && provider_.min_rwf_minor_version_ > rwf_minor_version_) ||
 	     (provider_.min_rwf_major_version_ > rwf_major_version_)))
 	{
-		LOG(INFO) << prefix_ << "Degrading RWF: { MajorVersion: " << (unsigned)rwf_major_version_ <<
-						       ", MinorVersion: " << (unsigned)rwf_minor_version_ << " }";
+		LOG(INFO) << prefix_ << "Degrading RWF: { "
+					  "\"MajorVersion\": " << (unsigned)rwf_major_version_ <<
+					", \"MinorVersion\": " << (unsigned)rwf_minor_version_ <<
+					" }";
 		provider_.min_rwf_major_version_ = rwf_major_version_;
 		provider_.min_rwf_minor_version_ = rwf_minor_version_;
 	}
@@ -371,7 +377,9 @@ psych::session_t::processLoginSuccess (
 
 /* ignore any error */
 	} catch (rfa::common::InvalidUsageException& e) {
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { StatusText: \"" << e.getStatus().getStatusText() << "\" }";
+		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { "
+					"\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+					" }";
 /* cannot publish until directory is sent. */
 		return;
 	}
@@ -450,7 +458,9 @@ psych::session_t::sendDirectoryResponse()
 	uint8_t validation_status = response.validateMsg (&warningText);
 	if (rfa::message::MsgValidationWarning == validation_status) {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED]++;
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { warningText: \"" << warningText << "\" }";
+		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { "
+					"\"warningText\": \"" << warningText << "\""
+					" }";
 	} else {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED]++;
 		assert (rfa::message::MsgValidationOk == validation_status);
@@ -527,10 +537,11 @@ psych::session_t::processOMMCmdErrorEvent (
 {
 	cumulative_stats_[SESSION_PC_OMM_CMD_ERRORS]++;
 	LOG(ERROR) << prefix_ << "OMMCmdErrorEvent: { "
-		"CmdId: " << error.getCmdID() <<
-		", State: " << error.getStatus().getState() <<
-		", StatusCode: " << error.getStatus().getStatusCode() <<
-		", StatusText: \"" << error.getStatus().getStatusText() << "\" }";
+		  "\"CmdId\": " << error.getCmdID() <<
+		", \"State\": " << error.getStatus().getState() <<
+		", \"StatusCode\": " << error.getStatus().getStatusCode() <<
+		", \"StatusText\": \"" << error.getStatus().getStatusText() << "\""
+		" }";
 }
 
 /* eof */

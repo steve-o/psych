@@ -3,7 +3,6 @@
 
 #ifndef __PSYCH_VERSION_HH__
 #define __PSYCH_VERSION_HH__
-
 #pragma once
 
 namespace psych

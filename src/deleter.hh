@@ -3,11 +3,11 @@
 
 #ifndef __DELETER_HH__
 #define __DELETER_HH__
-
 #pragma once
 
 #include <memory>
 
+namespace psych {
 namespace internal {
 
 	struct release_deleter {
@@ -23,6 +23,7 @@ namespace internal {
 	};
 
 } /* namespace internal */
+} /* namespace psych */
 
 #endif /* __DELETER_HH__ */
 

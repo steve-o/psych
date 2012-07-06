@@ -3,7 +3,6 @@
 
 #ifndef __RFA_HH__
 #define __RFA_HH__
-
 #pragma once
 
 /* Boost noncopyable base class */
@@ -17,6 +16,12 @@
 
 namespace psych
 {
+	namespace internal
+	{
+// The library version which works with the current version of the headers.
+		#define RFA_LIBRARY_VERSION "7.2.0."
+
+	}  // namespace internal
 
 	class rfa_t :
 		boost::noncopyable
@@ -26,6 +31,7 @@ namespace psych
 		~rfa_t();
 
 		bool init() throw (rfa::common::InvalidUsageException);
+		bool VerifyVersion();
 
 	private:
 

@@ -5,7 +5,6 @@
 
 #ifndef __CONFIG_HH__
 #define __CONFIG_HH__
-
 #pragma once
 
 #include <string>
@@ -262,7 +261,7 @@ namespace psych
 			  "\"name\": \"" << resource.name << "\""
 			", \"source\": \"" << resource.source << "\""
 			", \"path\": \"" << resource.path << "\""
-			", \"entitlement_code\": \"" << resource.entitlement_code << "\""
+			", \"entitlement_code\": " << resource.entitlement_code << ""
 			", \"fields\": { ";
 		for (auto it = resource.fields.begin();
 			it != resource.fields.end();

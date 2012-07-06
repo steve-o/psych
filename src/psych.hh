@@ -4,14 +4,19 @@
 
 #ifndef __PSYCH_HH__
 #define __PSYCH_HH__
-
 #pragma once
 
 #include <cstdint>
-#include <unordered_map>
+#include <list>
+#include <map>
+#include <memory>
+#include <string>
+
+/* Boost Chrono. */
+#include <boost/chrono.hpp>
 
 /* Boost Posix Time */
-#include "boost/date_time/posix_time/posix_time.hpp"
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 /* Boost noncopyable base class. */
 #include <boost/utility.hpp>
@@ -127,12 +132,6 @@ namespace psych
 		const resource_t& resource;
 	};
 
-	struct flex_filter_t
-	{
-		double bid_price;
-		double ask_price;
-	};
-
 	class event_pump_t
 	{
 	public:
@@ -153,30 +152,30 @@ namespace psych
 	};
 
 /* Periodic timer event source */
+	template<class Clock, class Duration = typename Clock::duration>
 	class time_base_t
 	{
 	public:
-		virtual bool processTimer (boost::posix_time::ptime t) = 0;
+		virtual bool processTimer (const boost::chrono::time_point<Clock, Duration>& t) = 0;
 	};
 
+	template<class Clock, class Duration = typename Clock::duration>
 	class time_pump_t
 	{
 	public:
-		time_pump_t (boost::posix_time::ptime due_time, boost::posix_time::time_duration td, time_base_t* cb) :
+		time_pump_t (const boost::chrono::time_point<Clock, Duration>& due_time, Duration td, time_base_t<Clock, Duration>* cb) :
 			due_time_ (due_time),
 			td_ (td),
 			cb_ (cb)
 		{
 			CHECK(nullptr != cb_);
-			if (due_time_.is_not_a_date_time())
-				due_time_ = boost::get_system_time() + td_;
 		}
 
 		void operator()()
 		{
 			try {
 				while (true) {
-					boost::this_thread::sleep (due_time_);
+					boost::this_thread::sleep_until (due_time_);
 					if (!cb_->processTimer (due_time_))
 						break;
 					due_time_ += td_;
@@ -187,13 +186,13 @@ namespace psych
 		}
 
 	private:
-		boost::system_time due_time_;
-		boost::posix_time::time_duration td_;
-		time_base_t* cb_;
+		boost::chrono::time_point<Clock, Duration> due_time_;
+		Duration td_;
+		time_base_t<Clock, Duration>* cb_;
 	};
 
 	class psych_t :
-		public time_base_t,
+		public time_base_t<boost::chrono::system_clock>,
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 		public vpf::AbstractUserPlugin,
 		public vpf::Command,
@@ -231,13 +230,18 @@ namespace psych
 #endif
 
 /* Configured period timer entry point. */
-		bool processTimer (boost::posix_time::ptime t) override;
+		bool processTimer (const boost::chrono::time_point<boost::chrono::system_clock>& t) override;
 
 /* Global list of all plugin instances.  AE owns pointer. */
 		static std::list<psych_t*> global_list_;
 		static boost::shared_mutex global_list_lock_;
 
 	private:
+#ifndef CONFIG_PSYCH_AS_APPLICATION
+/* Tcl API registration */
+		bool register_tcl_api (const char* id);
+		bool unregister_tcl_api (const char* id);
+#endif
 
 /* Run core event loop. */
 		void mainLoop();
@@ -255,10 +259,10 @@ namespace psych
 		bool httpPsychQuery (std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t>& connections, int flags);
 
 /* Parse libcurl driven HTTP response. */
-		bool processHttpResponse (connection_t* connection, boost::posix_time::ptime* open_time, boost::posix_time::ptime* close_time, std::vector<std::string>* columns, std::vector<std::pair<std::string, std::vector<double>>>* rows);
+		bool processHttpResponse (connection_t* connection, std::string* engine_version, boost::posix_time::ptime* open_time, boost::posix_time::ptime* close_time, std::vector<std::string>* columns, std::vector<std::pair<std::string, std::vector<double>>>* rows);
 
 /* Broadcast out message. */
-		bool sendRefresh (const resource_t& resource, const boost::posix_time::ptime& open_time, const boost::posix_time::ptime& close_time, const std::vector<std::string>& columns, const std::vector<std::pair<std::string, std::vector<double>>>& rows) throw (rfa::common::InvalidUsageException);
+		bool sendRefresh (const resource_t& resource, const std::string& engine_version, const boost::posix_time::ptime& open_time, const boost::posix_time::ptime& close_time, const std::vector<std::string>& columns, const std::vector<std::pair<std::string, std::vector<double>>>& rows) throw (rfa::common::InvalidUsageException);
 
 /* Generate DACS lock from entity code list */
 		bool generatePELock (rfa::common::Buffer* buf, const rfa::common::RFA_Vector<unsigned long>& peList);
@@ -308,7 +312,8 @@ namespace psych
 
 /* Publish instruments. */
 		std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t> connections_;
-		std::map<resource_t, std::map<std::string, std::pair<std::string, std::shared_ptr<broadcast_stream_t>>>, resource_compare_t> stream_vector_;
+		std::map<std::string, std::shared_ptr<broadcast_stream_t>> stream_vector_;
+		std::map<resource_t, std::map<std::string, std::pair<std::string, std::shared_ptr<broadcast_stream_t>>>, resource_compare_t> query_vector_;
 		boost::shared_mutex query_mutex_;
 
 /* Event pump and thread. */
@@ -325,7 +330,7 @@ namespace psych
 		static LONG volatile curl_ref_count_;
 
 /* Thread timer. */
-		std::unique_ptr<time_pump_t> timer_;
+		std::unique_ptr<time_pump_t<boost::chrono::system_clock>> timer_;
 		std::unique_ptr<boost::thread> timer_thread_;
 
 /** Performance Counters. **/

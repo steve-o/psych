@@ -3,7 +3,6 @@
 
 #ifndef __PROVIDER_HH__
 #define __PROVIDER_HH__
-
 #pragma once
 
 #include <cstdint>
@@ -20,10 +19,10 @@
 
 #include "rfa.hh"
 #include "config.hh"
-#include "deleter.hh"
 
 namespace psych
 {
+
 /* Performance Counters */
 	enum {
 		PROVIDER_PC_MSGS_SENT,
@@ -73,6 +72,9 @@ namespace psych
 		void getServiceState (rfa::data::ElementList& elementList);
 
 		const config_t& config_;
+
+/* Copy of RFA context */
+		std::shared_ptr<psych::rfa_t> rfa_;
 
 /* Reuters Wire Format versions. */
 		uint8_t min_rwf_major_version_;
