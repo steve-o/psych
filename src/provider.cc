@@ -61,16 +61,21 @@ psych::provider_t::~provider_t()
 bool
 psych::provider_t::init()
 {
-	std::for_each (sessions_.begin(), sessions_.end(),
-		[](std::unique_ptr<session_t>& it)
-	{
+	std::for_each (sessions_.begin(), sessions_.end(), [](std::unique_ptr<session_t>& it) {
 		it->init ();
 	});
 
 /* 6.2.2.1 RFA Version Info.  The version is only available if an application
  * has acquired a Session (i.e., the Session Layer library is loaded).
  */
-	return rfa_->VerifyVersion();
+	if (!rfa_->VerifyVersion())
+		return false;
+
+	std::for_each (sessions_.begin(), sessions_.end(), [](std::unique_ptr<session_t>& it) {
+		it->createOMMProvider ();
+	});
+
+	return true;
 }
 
 /* Create an item stream for a given symbol name.  The Item Stream maintains

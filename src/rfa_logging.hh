@@ -3,14 +3,13 @@
 
 #ifndef __RFA_LOGGING_HH__
 #define __RFA_LOGGING_HH__
-
 #pragma once
 
 /* Boost noncopyable base class */
 #include <boost/utility.hpp>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 #include "config.hh"
 #include "deleter.hh"

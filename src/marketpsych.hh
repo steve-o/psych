@@ -9,7 +9,7 @@
 #include <cstdint>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 namespace marketpsych
 {

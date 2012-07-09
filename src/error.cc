@@ -4,7 +4,7 @@
 #include "error.hh"
 
 /* RFA 7.2 headers */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 const char*
 psych::severity_string (

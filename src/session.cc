@@ -52,7 +52,10 @@ psych::session_t::~session_t()
 	omm_provider_.reset();
 	session_.reset();
 }
-	
+
+/* Get RFA to load the session layer library but perform absolute minimum
+ * functionality before being able to acquire the runtime library version.
+ */
 bool
 psych::session_t::init()
 {
@@ -63,8 +66,16 @@ psych::session_t::init()
 	VLOG(3) << prefix_<< "Acquiring RFA session.";
 	const RFA_String sessionName (config_.session_name.c_str(), 0, false);
 	session_.reset (rfa::sessionLayer::Session::acquire (sessionName));
-	if (!(bool)session_)
-		return false;
+	return (bool)session_;
+}
+
+/* Once RFA version is acquired and determined to be compatible initialisation
+ * of the RFA session can continue.
+ */
+bool
+psych::session_t::createOMMProvider()
+{
+	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
 /* 7.5.6 Initializing an OMM Non-Interactive Provider. */
 	VLOG(3) << prefix_<< "Creating OMM provider.";

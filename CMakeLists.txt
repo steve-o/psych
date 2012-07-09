@@ -8,7 +8,7 @@ project (psych)
 
 set(PSYCH_VERSION_MAJOR 2)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 8)
+set(PSYCH_VERSION_BUILD 9)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
@@ -45,12 +45,13 @@ set(VHAYU_LIBRARIES
 )
 
 # Thomson Reuters Robust Foundation API
-set(RFA_ROOT D:/rfa7.2.0.L1.win-shared.rrg)
+set(RFA_ROOT D:/rfa7.2.1.L1.win-shared.rrg)
 set(RFA_INCLUDE_DIRS
 	${RFA_ROOT}/Include
 	${RFA_ROOT}/Include/rwf
 )
-set(RFA_LIBRARY_DIRS ${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD)
+set(RFA_LIBRARY_DIR ${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD)
+set(RFA_LIBRARY_DIRS ${RFA_LIBRARY_DIR})
 set(RFA_LIBRARIES
         RFA7_Common100_x64.lib
         RFA7_Config100_x64.lib
@@ -62,19 +63,19 @@ set(RFA_LIBRARIES
         DACS7_lock100_x64.lib
 )
 set(RFA_RUNTIME_LIBRARIES
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Common100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Config100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Logger100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Data100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_Connections_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer_OMM100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_SessionLayer100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Cons_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/RFA7_RSSL_Prov_Adapter100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/DACS7_lock100_x64.dll
-	${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/dacs4wn64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Common100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Config100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Logger100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Data100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Connections100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_Connections_OMM100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_SessionLayer_OMM100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_SessionLayer100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_RSSL_Adapter100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_RSSL_Cons_Adapter100_x64.dll
+	${RFA_LIBRARY_DIR}/RFA7_RSSL_Prov_Adapter100_x64.dll
+	${RFA_LIBRARY_DIR}/DACS7_lock100_x64.dll
+	${RFA_LIBRARY_DIR}/dacs4wn64.dll
 )
 
 # Boost headers plus built libraries
@@ -126,6 +127,8 @@ add_definitions(
 	-DCURL_STATICLIB
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
+# RFA version
+        -DRFA_LIBRARY_VERSION="7.2.1."
 # production release
 	-DOFFICIAL_BUILD
 )
@@ -140,7 +143,7 @@ endif (CONFIG_PSYCH_AS_APPLICATION)
 set(CMAKE_CXX_FLAGS "/EHa")
 
 #-----------------------------------------------------------------------------
-# source files
+# generators
 
 configure_file(
 	${CMAKE_SOURCE_DIR}/version_generator.py.in
@@ -158,6 +161,14 @@ configure_file(
 	${CMAKE_BINARY_DIR}/version.hh
 	COPYONLY
 )
+configure_file(
+	${CMAKE_SOURCE_DIR}/version.rc.in
+	${CMAKE_BINARY_DIR}/version.rc
+	@ONLY
+)
+#-----------------------------------------------------------------------------
+# source files
+
 set(cxx-sources
 	src/config.cc
 	src/error.cc
@@ -192,11 +203,6 @@ set(cxx-sources
 	src/chromium/vlog.cc
 	src/chromium/win/event_trace_provider.cc
 	${CMAKE_BINARY_DIR}/version.cc
-)
-configure_file(
-	${CMAKE_SOURCE_DIR}/version.rc.in
-	${CMAKE_BINARY_DIR}/version.rc
-	@ONLY
 )
 set(rc-sources
 	${CMAKE_BINARY_DIR}/version.rc
@@ -245,6 +251,9 @@ else (CONFIG_PSYCH_AS_APPLICATION)
 	)
 endif (CONFIG_PSYCH_AS_APPLICATION)
 
+add_executable(rfa_version src/rfa_version.cc)
+target_link_libraries(rfa_version ${RFA_LIBRARIES})
+
 if (CONFIG_PSYCH_AS_APPLICATION)
 	set(config
 		${CMAKE_CURRENT_SOURCE_DIR}/config/config.json
@@ -259,7 +268,7 @@ endif (CONFIG_PSYCH_AS_APPLICATION)
 
 file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
 
-install (TARGETS psych DESTINATION bin)
+install (TARGETS psych rfa_version DESTINATION bin)
 install (FILES ${RFA_RUNTIME_LIBRARIES} DESTINATION bin)
 install (FILES ${config} DESTINATION config)
 install (FILES ${mibs} DESTINATION mibs)

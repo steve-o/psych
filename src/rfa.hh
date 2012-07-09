@@ -9,20 +9,13 @@
 #include <boost/utility.hpp>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 #include "config.hh"
 #include "deleter.hh"
 
 namespace psych
 {
-	namespace internal
-	{
-// The library version which works with the current version of the headers.
-		#define RFA_LIBRARY_VERSION "7.2.0."
-
-	}  // namespace internal
-
 	class rfa_t :
 		boost::noncopyable
 	{

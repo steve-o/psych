@@ -28,7 +28,7 @@
 #include <curl/multi.h>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 /* Velocity Analytics Plugin Framework */
 #include <vpf/vpf.h>

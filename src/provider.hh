@@ -15,7 +15,7 @@
 #include <boost/utility.hpp>
 
 /* RFA 7.2 */
-#include <rfa.hh>
+#include <rfa/rfa.hh>
 
 #include "rfa.hh"
 #include "config.hh"
