@@ -309,6 +309,7 @@ psych::psych_t::init (
 bool
 psych::psych_t::init()
 {
+/* TODO: split large configuration display into multiple parts */
 	LOG(INFO) << config_;
 
 /** libcurl initialisation. **/
@@ -1393,7 +1394,6 @@ psych::psych_t::sendRefresh (
 /* STOCK_RIC
  */
 	stock_ric_field.setFieldID (kRdmStockRicId);
-	stock_ric_field.setData (stock_ric_data);
 
 /* SF_NAME
  */
@@ -1467,6 +1467,7 @@ psych::psych_t::sendRefresh (
 /* STOCK_RIC */
 		const RFA_String stock_ric (jt->second.first.c_str(), 0, false);
 		stock_ric_data.setFromString (stock_ric, rfa::data::DataBuffer::StringAsciiEnum);
+		stock_ric_field.setData (stock_ric_data);
 		it.bind (stock_ric_field);
 /* SF_NAME */
 		it.bind (sf_name_field);

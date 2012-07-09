@@ -8,7 +8,7 @@ project (psych)
 
 set(PSYCH_VERSION_MAJOR 2)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 9)
+set(PSYCH_VERSION_BUILD 10)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
@@ -258,11 +258,13 @@ if (CONFIG_PSYCH_AS_APPLICATION)
 	set(config
 		${CMAKE_CURRENT_SOURCE_DIR}/config/config.json
 		${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+		"${CMAKE_CURRENT_SOURCE_DIR}/config/Sawbuck ETW provider.reg"
 	)
 else (CONFIG_PSYCH_AS_APPLICATION)
 	set(config
 		${CMAKE_CURRENT_SOURCE_DIR}/config/psych.xml
 		${CMAKE_CURRENT_SOURCE_DIR}/config/example.reg
+		"${CMAKE_CURRENT_SOURCE_DIR}/config/Sawbuck ETW provider.reg"
 	)
 endif (CONFIG_PSYCH_AS_APPLICATION)
 
