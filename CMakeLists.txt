@@ -6,9 +6,9 @@ cmake_minimum_required (VERSION 2.8.8)
 
 project (psych)
 
-set(PSYCH_VERSION_MAJOR 2)
+set(PSYCH_VERSION_MAJOR 3)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 10)
+set(PSYCH_VERSION_BUILD 11)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)

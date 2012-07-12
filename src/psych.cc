@@ -56,7 +56,8 @@ static const int kFieldListId = 3;
 /* RDM FIDs. */
 static const int kRdmStockRicId		= 1026;
 static const int kRdmSourceFeedNameId	= 1686;
-static const int kRdmTimestampId	= 6378;
+static const int kRdmTimeOfUpdateId	= 6640;
+static const int kRdmActiveDateId	= 6767;
 static const int kRdmEngineVersionId    = 8569;
 
 /* FlexRecord Quote identifier. */
@@ -1386,9 +1387,11 @@ psych::psych_t::sendRefresh (
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
 	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timestamp_field (false), price_field (false), engine_field (false);
-	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timestamp_data (false), price_data (false), engine_data (false);
+	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timeact_field (false), activ_date_field (false), price_field (false), engine_field (false);
+	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timeact_data (false), activ_date_data (false), price_data (false), engine_data (false);
 	rfa::data::Real64 real64;
+	rfa::data::Time rfaTime;
+	rfa::data::Date rfaDate;
 	struct tm _tm;
 
 /* STOCK_RIC
@@ -1411,30 +1414,25 @@ psych::psych_t::sendRefresh (
 	engine_field.setData (engine_data);
 	VLOG(3) << "engine version: " << engine_version;
 
-/* TIMESTAMP: ISO 8601 format, UTC: YYYY-MM-DD hh:mm:ss.sss
- */
+/* TIMEACT */
 	using namespace boost::posix_time;
-	using namespace boost::gregorian;
-	timestamp_field.setFieldID (kRdmTimestampId);
-	std::ostringstream ss;
-	ss << std::setfill ('0')
-	   << std::setw (4) << (int)close_time.date().year()
-	   << '-'
-	   << std::setw (2) << (int)close_time.date().month()
-	   << '-'
-	   << std::setw (2) << (int)close_time.date().day()
-	   << ' '
-	   << std::setw (2) << (int)close_time.time_of_day().hours()
-	   << ':'
-	   << std::setw (2) << (int)close_time.time_of_day().minutes()
-	   << ':'
-	   << std::setw (2) << (int)close_time.time_of_day().seconds()
-	   << ".000";
-/* stringstream to RFA_String requires a copy */
-	const RFA_String timestamp (ss.str().c_str(), 0, true);
-	timestamp_data.setFromString (timestamp, rfa::data::DataBuffer::StringRMTESEnum);
-	timestamp_field.setData (timestamp_data);
-	VLOG(3) << "timestamp: " << ss.str();
+	timeact_field.setFieldID (kRdmTimeOfUpdateId);
+	__time32_t time32 = to_unix_epoch<__time32_t> (close_time);
+	_gmtime32_s (&_tm, &time32);
+	rfaTime.setHour   (_tm.tm_hour);
+	rfaTime.setMinute (_tm.tm_min);
+	rfaTime.setSecond (_tm.tm_sec);
+	rfaTime.setMillisecond (0);
+	timeact_data.setTime (rfaTime);
+	timeact_field.setData (timeact_data);
+
+/* ACTIV_DATE */
+	activ_date_field.setFieldID (kRdmActiveDateId);
+	rfaDate.setDay   (/* rfa(1-31) */ _tm.tm_mday        /* tm(1-31) */);
+	rfaDate.setMonth (/* rfa(1-12) */ 1 + _tm.tm_mon     /* tm(0-11) */);
+	rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
+	activ_date_data.setDate (rfaDate);
+	activ_date_field.setData (activ_date_data);
 
 /* HIGH_1, LOW_1 as PRICE field type */
 	real64.setMagnitudeType (rfa::data::ExponentNeg6);
@@ -1473,8 +1471,10 @@ psych::psych_t::sendRefresh (
 		it.bind (sf_name_field);
 /* ENGINE_VER */
 		it.bind (engine_field);
-/* TIMESTAMP */
-		it.bind (timestamp_field);
+/* TIMACT */
+		it.bind (timeact_field);
+/* ACTIV_DATE */
+		it.bind (activ_date_field);
 
 /* map each column data to a TREP-RT FID */
 		size_t column_idx = 0;

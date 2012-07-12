@@ -9,10 +9,17 @@ SF_NAME    "SOURCE FEED NME"     1686  NULL        ALPHANUMERIC        6  RMTES_
 !
 ! Source feed name.
 !
-TIMESTAMP  "TIMESTAMP"           6378  NULL        ALPHANUMERIC       24  RMTES_STRING    24
+PRE_TM001  "PRED TIME 001"       6640  NULL        TIME                5  TIME             5
 !
-! Timestamp (GMT) of the item used in calculations in iso8601 format: YYYY-MM-DD 
-! hh:mm:ss.sss
+! Time when a certain field or fields in the record were updated.
+!
+PRE_DT008  "PRED DATE 008"       6767  NULL        DATE               11  DATE             4
+!
+! The date when the time in PRE_TM001 was updated.
+!
+ENGINE_VER "ENGINE VERSION"      8569  NULL        ALPHANUMERIC       16  RMTES_STRING    16
+!
+! The version of the News Analytics Engine used to score the news
 !
 
 MP_BUZZ    ""                       6  NULL        PRICE              17  REAL64           7
