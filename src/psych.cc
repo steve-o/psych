@@ -57,7 +57,7 @@ static const int kFieldListId = 3;
 static const int kRdmStockRicId		= 1026;
 static const int kRdmSourceFeedNameId	= 1686;
 static const int kRdmTimeOfUpdateId	= 6640;
-static const int kRdmActiveDateId	= 6767;
+static const int kRdmActiveDateId	= 6772;
 static const int kRdmEngineVersionId    = 8569;
 
 /* FlexRecord Quote identifier. */

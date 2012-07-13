@@ -8,7 +8,7 @@ project (psych)
 
 set(PSYCH_VERSION_MAJOR 3)
 set(PSYCH_VERSION_MINOR 0)
-set(PSYCH_VERSION_BUILD 11)
+set(PSYCH_VERSION_BUILD 12)
 
 # libcurl, tested 7.25.0
 set(CURL_ROOT C:/curl)
