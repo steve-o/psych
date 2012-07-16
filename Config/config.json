@@ -103,6 +103,10 @@
 
    "vendor_name":"Thomson Reuters",
 
+// Maximum RFA payload size.
+
+   "maximum_data_size":"8192",
+
 // MarketPsych specific configuration.
 //
 // HTTP poll and publish interval in seconds.

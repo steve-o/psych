@@ -174,6 +174,9 @@ namespace psych
 //  RFA vendor name.
 		std::string vendor_name;
 
+//  RFA maximum data buffer size for SingleWriteIterator.
+		std::string maximum_data_size;
+
 //  HTTP poll and publish interval in seconds.
 		std::string interval;
 
@@ -311,6 +314,7 @@ namespace psych
 			", \"monitor_name\": \"" << config.monitor_name << "\""
 			", \"event_queue_name\": \"" << config.event_queue_name << "\""
 			", \"vendor_name\": \"" << config.vendor_name << "\""
+			", \"maximum_data_size\": \"" << config.maximum_data_size << "\""
 			", \"interval\": \"" << config.interval << "\""
 			", \"tolerable_delay\": \"" << config.tolerable_delay << "\""
 			", \"retry_count\": \"" << config.retry_count << "\""

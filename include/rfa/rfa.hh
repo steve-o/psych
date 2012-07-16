@@ -32,6 +32,7 @@
 #include <Data/Map.h>
 #include <Data/MapEntry.h>
 #include <Data/MapWriteIterator.h>
+#include <Data/SingleWriteIterator.h>
 #include <Logger/AppLoggerMonitor.h>
 #include <Logger/AppLoggerInterestSpec.h>
 #include <Logger/AppLogger.h>

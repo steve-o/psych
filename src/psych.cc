@@ -410,6 +410,12 @@ psych::psych_t::init()
 			query_vector_.emplace (std::make_pair (*it, name_map));
 		}
 
+/* Pre-allocate memory buffer for payload iterator */
+		const long maximum_data_size = std::atol (config_.maximum_data_size.c_str());
+		CHECK (maximum_data_size > 0);
+		single_write_it_.initialize (fields_, maximum_data_size);
+		CHECK (single_write_it_.isInitialized());
+
 	} catch (rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
@@ -1386,58 +1392,26 @@ psych::psych_t::sendRefresh (
 	fields_.setInfo (kDictionaryId, kFieldListId);
 
 /* DataBuffer based fields must be pre-encoded and post-bound. */
-	rfa::data::FieldListWriteIterator it;
-	rfa::data::FieldEntry stock_ric_field (false), sf_name_field (false), timeact_field (false), activ_date_field (false), price_field (false), engine_field (false);
-	rfa::data::DataBuffer stock_ric_data (false), sf_name_data (false), timeact_data (false), activ_date_data (false), price_data (false), engine_data (false);
-	rfa::data::Real64 real64;
-	rfa::data::Time rfaTime;
-	rfa::data::Date rfaDate;
-	struct tm _tm;
+	auto& it = single_write_it_;
+	DCHECK (it.isInitialized());
 
-/* STOCK_RIC
- */
-	stock_ric_field.setFieldID (kRdmStockRicId);
+	rfa::data::FieldEntry field (false);
+	struct tm _tm;
 
 /* SF_NAME
  */
-	sf_name_field.setFieldID (kRdmSourceFeedNameId);
 	const RFA_String sf_name (resource.source.c_str(), 0, false);
-	sf_name_data.setFromString (sf_name, rfa::data::DataBuffer::StringRMTESEnum);
-	sf_name_field.setData (sf_name_data);
 	VLOG(3) << "source feed name: " << resource.source;
 
 /* ENGINE_VER
  */
-	engine_field.setFieldID (kRdmEngineVersionId);
 	const RFA_String engine (engine_version.c_str(), 0, false);
-	engine_data.setFromString (engine, rfa::data::DataBuffer::StringRMTESEnum);
-	engine_field.setData (engine_data);
 	VLOG(3) << "engine version: " << engine_version;
 
-/* TIMEACT */
+/* TIMEACT & ACTIV_DATE */
 	using namespace boost::posix_time;
-	timeact_field.setFieldID (kRdmTimeOfUpdateId);
 	__time32_t time32 = to_unix_epoch<__time32_t> (close_time);
 	_gmtime32_s (&_tm, &time32);
-	rfaTime.setHour   (_tm.tm_hour);
-	rfaTime.setMinute (_tm.tm_min);
-	rfaTime.setSecond (_tm.tm_sec);
-	rfaTime.setMillisecond (0);
-	timeact_data.setTime (rfaTime);
-	timeact_field.setData (timeact_data);
-
-/* ACTIV_DATE */
-	activ_date_field.setFieldID (kRdmActiveDateId);
-	rfaDate.setDay   (/* rfa(1-31) */ _tm.tm_mday        /* tm(1-31) */);
-	rfaDate.setMonth (/* rfa(1-12) */ 1 + _tm.tm_mon     /* tm(0-11) */);
-	rfaDate.setYear  (/* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */);
-	activ_date_data.setDate (rfaDate);
-	activ_date_field.setData (activ_date_data);
-
-/* HIGH_1, LOW_1 as PRICE field type */
-	real64.setMagnitudeType (rfa::data::ExponentNeg6);
-	price_data.setReal64 (real64);
-	price_field.setData (price_data);
 
 	rfa::common::RespStatus status;
 /* Item interaction state: Open, Closed, ClosedRecover, Redirected, NonStreaming, or Unspecified. */
@@ -1461,20 +1435,34 @@ psych::psych_t::sendRefresh (
 
 		VLOG(2) << "Publishing to stream " << stream->rfa_name;
 		attribInfo.setName (stream->rfa_name);
+
+/* Clear required for SingleWriteIterator state machine. */
+		it.clear();
 		it.start (fields_);
 /* STOCK_RIC */
+		field.setFieldID (kRdmStockRicId);
+		it.bind (field);
 		const RFA_String stock_ric (jt->second.first.c_str(), 0, false);
-		stock_ric_data.setFromString (stock_ric, rfa::data::DataBuffer::StringAsciiEnum);
-		stock_ric_field.setData (stock_ric_data);
-		it.bind (stock_ric_field);
+		it.setString (stock_ric, rfa::data::DataBuffer::StringAsciiEnum);
 /* SF_NAME */
-		it.bind (sf_name_field);
+		field.setFieldID (kRdmSourceFeedNameId);
+		it.bind (field);
+		it.setString (sf_name, rfa::data::DataBuffer::StringRMTESEnum);
 /* ENGINE_VER */
-		it.bind (engine_field);
+		field.setFieldID (kRdmEngineVersionId);
+		it.bind (field);
+		it.setString (engine, rfa::data::DataBuffer::StringRMTESEnum);
 /* TIMACT */
-		it.bind (timeact_field);
+		field.setFieldID (kRdmTimeOfUpdateId);
+		it.bind (field);
+		it.setTime (_tm.tm_hour, _tm.tm_min, _tm.tm_sec, 0 /* ms */);
 /* ACTIV_DATE */
-		it.bind (activ_date_field);
+		field.setFieldID (kRdmActiveDateId);
+		it.bind (field);
+		const uint16_t year  = /* rfa(yyyy) */ 1900 + _tm.tm_year /* tm(yyyy-1900 */;
+		const uint8_t  month = /* rfa(1-12) */    1 + _tm.tm_mon  /* tm(0-11) */;
+		const uint8_t  day   = /* rfa(1-31) */        _tm.tm_mday /* tm(1-31) */;
+		it.setDate (year, month, day);
 
 /* map each column data to a TREP-RT FID */
 		size_t column_idx = 0;
@@ -1485,18 +1473,15 @@ psych::psych_t::sendRefresh (
 				VLOG(3) << "Unmapped column \"" << column << "\".";
 				return;
 			}
-			price_field.setFieldID (kt->second);
+			field.setFieldID (kt->second);
+			it.bind (field);
 			if (boost::math::isnan (row.second[column_idx])) {
-				price_data.setBlankData (rfa::data::DataBuffer::Real64Enum);
-				price_field.setData (price_data);
+				it.setBlank (rfa::data::DataBuffer::Real64Enum);
 				VLOG(4) << column << "(" << kt->second << "): <blank>";
 			} else {
-				real64.setValue (marketpsych::mantissa (row.second[column_idx]));
-				price_data.setReal64 (real64);
-				price_field.setData (price_data);
+				it.setReal (marketpsych::mantissa (row.second[column_idx]), rfa::data::ExponentNeg6);
 				VLOG(4) << column << "(" << kt->second << "): " << row.second[column_idx];
 			}
-			it.bind (price_field);
 			++column_idx;
 		});
 

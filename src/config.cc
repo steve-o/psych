@@ -81,12 +81,24 @@ psych::config_t::validate()
 		return false;
 	}
 
-/* Maximum response size must be provided for buffer allocation. */
+/* Maximum data size & maximum response size must be provided for buffer allocation. */
+	long value;
+
+	if (maximum_data_size.empty()) {
+		LOG(ERROR) << "Undefined maximum data size.";
+		return false;
+	}
+	value = std::atol (maximum_data_size.c_str());
+	if (value <= 0) {
+		LOG(ERROR) << "Invalid maximum data size \"" << maximum_data_size << "\".";
+		return false;
+	}
+
 	if (maximum_response_size.empty()) {
 		LOG(ERROR) << "Undefined maximum response size.";
 		return false;
 	}
-	long value = std::atol (maximum_response_size.c_str());
+	value = std::atol (maximum_response_size.c_str());
 	if (value <= 0) {
 		LOG(ERROR) << "Invalid maximum response size \"" << maximum_response_size << "\".";
 		return false;
@@ -256,6 +268,11 @@ psych::config_t::parseRfaNode (
 	attr = xml.transcode (elem->getAttribute (L"key"));
 	if (!attr.empty())
 		key = attr;
+
+/* maximumDataSize="bytes" */
+	attr = xml.transcode (elem->getAttribute (L"maximumDataSize"));
+	if (!attr.empty())
+		maximum_data_size = attr;
 
 /* <service> */
 	nodeList = elem->getElementsByTagName (L"service");
@@ -872,6 +889,7 @@ psych::config_t::parseConfig (
 	dict_val->GetString ("monitor_name", &monitor_name);
 	dict_val->GetString ("event_queue_name", &event_queue_name);
 	dict_val->GetString ("vendor_name", &vendor_name);
+	dict_val->GetString ("maximum_data_size", &maximum_data_size);
 
 /* psych application parameters */
 	dict_val->GetString ("interval", &interval);

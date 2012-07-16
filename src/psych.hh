@@ -323,6 +323,9 @@ namespace psych
 /* Publish fields. */
 		rfa::data::FieldList fields_;
 
+/* Iterator for populating publish fields */
+		rfa::data::SingleWriteIterator single_write_it_;
+
 /* libcurl multi-interface context */
 		ms::unique_handle<CURLM*, multipass_traits> multipass_;
 

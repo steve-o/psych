@@ -53,7 +53,8 @@
      is not defined underneath the key.
 
   -->
-	<Rfa>
+	<Rfa key=""
+		maximumDataSize="8192">
 
 <!-- TREP-RT service name this plugin provides, compare to IDN_RDF or IDN_SELECTFEED. -->
 		<service name="hPSYCH"/>
