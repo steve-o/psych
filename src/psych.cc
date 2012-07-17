@@ -684,7 +684,8 @@ psych::psych_t::processTimer (
 		LOG(ERROR) << "InvalidUsageException: { "
 			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
 			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
-			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
+			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			" }";
 	}
 	return true;
 }
@@ -1251,6 +1252,11 @@ psych::psych_t::processHttpResponse (
 				LOG(WARNING) << "Aborted HTTP transfer " << connection->url << " on malformed table header \"" << t.token() << "\".";
 				return false;
 			}
+			if (DLOG_IS_ON(INFO)) {
+				unsigned i = 0;
+				for (auto it = columns->begin(); it != columns->end(); ++it)
+					DLOG(INFO) << "Column #" << ++i << ": " << *it;
+			}
 			state = STATE_ROW;
 		} else if (STATE_ROW == state) {
 /* 1679    0.00131 0.00131...                          */
@@ -1391,12 +1397,7 @@ psych::psych_t::sendRefresh (
 	fields_.setAssociatedMetaInfo (provider_->getRwfMajorVersion(), provider_->getRwfMinorVersion());
 	fields_.setInfo (kDictionaryId, kFieldListId);
 
-/* DataBuffer based fields must be pre-encoded and post-bound. */
-	auto& it = single_write_it_;
-	DCHECK (it.isInitialized());
-
-	rfa::data::FieldEntry field (false);
-	struct tm _tm;
+/* Prepare common fields. */
 
 /* SF_NAME
  */
@@ -1409,7 +1410,7 @@ psych::psych_t::sendRefresh (
 	VLOG(3) << "engine version: " << engine_version;
 
 /* TIMEACT & ACTIV_DATE */
-	using namespace boost::posix_time;
+	struct tm _tm;
 	__time32_t time32 = to_unix_epoch<__time32_t> (close_time);
 	_gmtime32_s (&_tm, &time32);
 
@@ -1432,13 +1433,20 @@ psych::psych_t::sendRefresh (
 			return;
 		}
 		auto& stream = jt->second.second;
-
 		VLOG(2) << "Publishing to stream " << stream->rfa_name;
 		attribInfo.setName (stream->rfa_name);
 
 /* Clear required for SingleWriteIterator state machine. */
+		auto& it = single_write_it_;
+		DCHECK (it.isInitialized());
 		it.clear();
 		it.start (fields_);
+
+/* For each field set the Id via a FieldEntry bound to the iterator followed by setting the data.
+ * The iterator API provides setters for common types excluding 32-bit floats, with fallback to 
+ * a generic DataBuffer API for other types or support of pre-calculated values.
+ */
+		rfa::data::FieldEntry field (false);
 /* STOCK_RIC */
 		field.setFieldID (kRdmStockRicId);
 		it.bind (field);
@@ -1471,16 +1479,19 @@ psych::psych_t::sendRefresh (
 			const auto kt = resource.fields.find (column);
 			if (resource.fields.end() == kt) {
 				VLOG(3) << "Unmapped column \"" << column << "\".";
+				++column_idx;
 				return;
 			}
+			CHECK(column_idx > 0);
 			field.setFieldID (kt->second);
 			it.bind (field);
-			if (boost::math::isnan (row.second[column_idx])) {
+/* value vector is offset from the second column */
+			if (boost::math::isnan (row.second[column_idx-1])) {
 				it.setBlank (rfa::data::DataBuffer::Real64Enum);
 				VLOG(4) << column << "(" << kt->second << "): <blank>";
 			} else {
-				it.setReal (marketpsych::mantissa (row.second[column_idx]), rfa::data::ExponentNeg6);
-				VLOG(4) << column << "(" << kt->second << "): " << row.second[column_idx];
+				it.setReal (marketpsych::mantissa (row.second[column_idx-1]), rfa::data::ExponentNeg6);
+				VLOG(4) << column << "(" << kt->second << "): " << row.second[column_idx-1];
 			}
 			++column_idx;
 		});
