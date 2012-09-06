@@ -2,3 +2,4 @@ syntax: regexp
 ^build/
 ^debug/
 Psych-MIB-01.txt
+^build-msvc/

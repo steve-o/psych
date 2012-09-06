@@ -11,13 +11,33 @@ set(PSYCH_VERSION_MINOR 1)
 set(PSYCH_VERSION_BUILD 15)
 
 # libcurl, tested 7.25.0
-set(CURL_ROOT C:/curl)
+if (MSVC11)
+	set(CURL_BUILD_COMPILER "vc110")
+elseif (MSVC10)
+	set(CURL_BUILD_COMPILER "vc100")
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(CURL_BUILD_TYPE "debug")
+else (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(CURL_BUILD_TYPE "release")
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+set(CURL_ROOT D:/curl-7.25.0/stage/${CURL_BUILD_COMPILER}/x64/${CURL_BUILD_TYPE})
 set(CURL_INCLUDE_DIRS ${CURL_ROOT}/include)
 set(CURL_LIBRARY_DIRS ${CURL_ROOT}/lib)
 set(CURL_LIBRARIES libcurl.lib)
 
 # Net-SNMP SDK installed, tested 5.7.1.
-set(NETSNMP_ROOT C:/usr)
+if (MSVC11)
+	set(NETSNMP_BUILD_COMPILER "vc110")
+elseif (MSVC10)
+	set(NETSNMP_BUILD_COMPILER "vc100")
+endif ()
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(NETSNMP_BUILD_TYPE "debug")
+else (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(NETSNMP_BUILD_TYPE "release")
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+set(NETSNMP_ROOT D:/net-snmp-5.7.1/stage/${NETSNMP_BUILD_COMPILER}/x64/${NETSNMP_BUILD_TYPE})
 set(NETSNMP_INCLUDE_DIRS ${NETSNMP_ROOT}/include)
 set(NETSNMP_LIBRARY_DIRS ${NETSNMP_ROOT}/lib)
 set(NETSNMP_LIBRARIES
@@ -27,30 +47,44 @@ set(NETSNMP_LIBRARIES
 )
 
 # TREP-VA 7.0 SDK
-set(VHAYU_ROOT C:/Vhayu)
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(VHAYU_BUILD_TYPE "debug")
+else (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(VHAYU_BUILD_TYPE "release")
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
+set(VHAYU_ROOT D:/Vhayu-7.0.5)
 set(VHAYU_INCLUDE_DIRS
 	${VHAYU_ROOT}/Engine/TBSDK/Include
 	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/include
 )
 set(VHAYU_LIBRARY_DIRS
-	${VHAYU_ROOT}/Engine/TBSDK/Lib64/Release
+	${VHAYU_ROOT}/Engine/TBSDK/Lib64/${VHAYU_BUILD_TYPE}
 	${VHAYU_ROOT}/Engine/ThirdParty/xerces-c-3.1.1-x86_64-windows-vc-10.0/lib
+)
+set(VHAYU_XERCES_LIBRARY
+	optimized xerces-c_3.lib
+	debug xerces-c_3D.lib
 )
 set(VHAYU_LIBRARIES
 	FlexRecord.lib
 	PluginFramework.lib
 	Utility.lib
 	SEDll.lib
-	xerces-c_3.lib
+	${VHAYU_XERCES_LIBRARY}
 )
 
 # Thomson Reuters Robust Foundation API
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(RFA_BUILD_TYPE "Debug_MDd")
+else (CMAKE_BUILD_TYPE STREQUAL "Debug")
+	set(RFA_BUILD_TYPE "Release_MD")
+endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 set(RFA_ROOT D:/rfa7.2.1.L1.win-shared.rrg)
 set(RFA_INCLUDE_DIRS
 	${RFA_ROOT}/Include
 	${RFA_ROOT}/Include/rwf
 )
-set(RFA_LIBRARY_DIR ${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD)
+set(RFA_LIBRARY_DIR ${RFA_ROOT}/Libs/WIN_64_VS100/${RFA_BUILD_TYPE})
 set(RFA_LIBRARY_DIRS ${RFA_LIBRARY_DIR})
 set(RFA_LIBRARIES
         RFA7_Common100_x64.lib
@@ -79,7 +113,7 @@ set(RFA_RUNTIME_LIBRARIES
 )
 
 # Boost headers plus built libraries
-set(BOOST_ROOT D:/boost_1_50_0)
+set(BOOST_ROOT D:/boost_1_51_0)
 set(BOOST_LIBRARYDIR ${BOOST_ROOT}/stage/lib)
 set(Boost_USE_STATIC_LIBS ON)
 find_package (Boost 1.50 COMPONENTS chrono thread REQUIRED)
@@ -121,12 +155,13 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_definitions(
 	-DWIN32
 	-DWIN32_LEAN_AND_MEAN
-# Windows Server 2008 (not-R2)
-	-D_WIN32_WINNT=0x0600
+# Windows Server 2008 R2, Windows 7
+	-D_WIN32_WINNT=0x0601
 # libcurl static imports
 	-DCURL_STATICLIB
 # Net-SNMP Autoconf overrides
 	-DHAVE_STDINT_H
+	-DHAVE_SOCKLEN_T
 # RFA version
         -DRFA_LIBRARY_VERSION="7.2.1."
 # production release
@@ -139,8 +174,18 @@ if (CONFIG_PSYCH_AS_APPLICATION)
 	)
 endif (CONFIG_PSYCH_AS_APPLICATION)
 
-# SEH Exceptions
-set(CMAKE_CXX_FLAGS "/EHa")
+# SEH Exceptions.
+string(REGEX REPLACE "/EHsc" "/EHa" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+# Parallel make.
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /MP")
+
+# Optimization flags.
+# http://msdn.microsoft.com/en-us/magazine/cc301698.aspx
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /GL")
+set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} /LTCG")
+set(CMAKE_MODULE_LINKER_FLAGS_RELEASE "${CMAKE_MODULE_LINKER_FLAGS_RELEASE} /LTCG")
 
 #-----------------------------------------------------------------------------
 # generators
