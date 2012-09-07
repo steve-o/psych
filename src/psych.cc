@@ -327,40 +327,45 @@ psych::psych_t::init()
 	LOG(INFO) << config_;
 
 /** libcurl initialisation. **/
-	CURLcode curl_errno;
+	try {
 /* initialise everything, not thread-safe */
-	if (InterlockedExchangeAdd (&curl_ref_count_, 1L) == 0) {
-		curl_errno = curl_global_init (CURL_GLOBAL_ALL);
-		if (CURLE_OK != curl_errno) {
-			LOG(ERROR) << "curl_global_init failed: { "
-				"\"code\": " << (int)curl_errno <<
-				" }";
-			return false;
+		if (InterlockedExchangeAdd (&curl_ref_count_, 1L) == 0) {
+			const CURLcode curl_errno = curl_global_init (CURL_GLOBAL_ALL);
+			if (CURLE_OK != curl_errno) {
+				LOG(ERROR) << "curl_global_init failed: { "
+					"\"code\": " << static_cast<int> (curl_errno) <<
+					" }";
+				return false;
+			}
 		}
-	}
 
 /* multi-interface context */
-	multipass_.reset (curl_multi_init());
-	if (!(bool)multipass_)
-		return false;
+		multipass_.reset (curl_multi_init());
+		if (!(bool)multipass_)
+			return false;
 
-	CURLMcode curl_merrno;
+		CURLMcode curl_merrno;
 /* libcurl 7.16.0: HTTP Pipelining as far as possible. */
-	if (!config_.enable_http_pipelining.empty()) {
-		const long value = std::atol (config_.enable_http_pipelining.c_str());
-		curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_PIPELINING, value);
-		LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_PIPELINING failed: { "
-			  "\"code\": " << (int)curl_merrno <<
-			", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
-			" }";
-	}
+		if (!config_.enable_http_pipelining.empty()) {
+			const long value = std::atol (config_.enable_http_pipelining.c_str());
+			curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_PIPELINING, value);
+			LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_PIPELINING failed: { "
+				  "\"code\": " << static_cast<int> (curl_merrno) <<
+				", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+				" }";
+		}
 
 /* libcurl 7.16.3: maximum amount of simultaneously open connections that libcurl may cache. */
-	curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_MAXCONNECTS, kMaxSocketsPerHost);
-	LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_MAXCONNECTS failed: { "
-		  "\"code\": " << (int)curl_merrno <<
-		", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
-		" }";
+		curl_merrno = curl_multi_setopt (multipass_.get(), CURLMOPT_MAXCONNECTS, kMaxSocketsPerHost);
+		LOG_IF(WARNING, CURLM_OK != curl_merrno) << "CURLMOPT_MAXCONNECTS failed: { "
+			  "\"code\": " << static_cast<int> (curl_merrno) <<
+			", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
+			" }";
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "Curl::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
+	}
 
 /** RFA initialisation. **/
 	try {
@@ -399,9 +404,7 @@ psych::psych_t::init()
 
 /* create stream per "name" */
 			std::map<std::string, std::pair<std::string, std::shared_ptr<broadcast_stream_t>>> name_map;
-			for (auto jt = it->items.begin();
-				it->items.end() != jt;
-				++jt)
+			for (auto jt = it->items.begin(); it->items.end() != jt; ++jt)
 			{
 				std::shared_ptr<broadcast_stream_t> stream;
 /* RIC may not be unique */
@@ -429,13 +432,13 @@ psych::psych_t::init()
 		single_write_it_.initialize (fields_, maximum_data_size);
 		CHECK (single_write_it_.isInitialized());
 
-	} catch (rfa::common::InvalidUsageException& e) {
+	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
 			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 		return false;
-	} catch (rfa::common::InvalidConfigurationException& e) {
+	} catch (const rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
 			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
 			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
@@ -443,62 +446,89 @@ psych::psych_t::init()
 			", \"ParameterName\": \"" << e.getParameterName() << "\""
 			", \"ParameterValue\": \"" << e.getParameterValue() << "\" }";
 		return false;
-	}
-
-#ifndef CONFIG_PSYCH_AS_APPLICATION
-/* No main loop inside this thread, must spawn new thread for message pump. */
-	event_pump_.reset (new event_pump_t (event_queue_));
-	if (!(bool)event_pump_) {
-		LOG(ERROR) << "Cannot create event pump.";
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "Rfa::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
 		return false;
 	}
 
-	event_thread_.reset (new boost::thread (*event_pump_.get()));
-	if (!(bool)event_thread_) {
-		LOG(ERROR) << "Cannot spawn event thread.";
+#ifndef CONFIG_PSYCH_AS_APPLICATION
+	try { 
+/* No main loop inside this thread, must spawn new thread for message pump. */
+		event_pump_.reset (new event_pump_t (event_queue_));
+		if (!(bool)event_pump_) {
+			LOG(ERROR) << "Cannot create event pump.";
+			return false;
+		}
+		event_thread_.reset (new boost::thread (*event_pump_.get()));
+		if (!(bool)event_thread_) {
+			LOG(ERROR) << "Cannot spawn event thread.";
+			return false;
+		}
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "EventPump::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
 		return false;
 	}
 #endif /* CONFIG_PSYCH_AS_APPLICATION */
 
+	try {
 /* Spawn SNMP implant. */
-	if (config_.is_snmp_enabled) {
-		snmp_agent_.reset (new snmp_agent_t (*this));
-		if (!(bool)snmp_agent_)
-			return false;
+		if (config_.is_snmp_enabled) {
+			snmp_agent_.reset (new snmp_agent_t (*this));
+			if (!(bool)snmp_agent_)
+				return false;
+		}
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "SnmpAgent::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
+	try {
 /* Register Tcl API. */
-	if (!register_tcl_api (getId()))
+		if (!register_tcl_api (getId()))
+			return false;
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "TclApi::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
 		return false;
+	}
 #endif
 
+	try {
 /* Timer for periodic publishing.
  */
-	using namespace boost;
-	posix_time::ptime due_time;
-	if (!get_next_interval (&due_time)) {
-		LOG(ERROR) << "Cannot calculate next interval.";
-		return false;
-	}
+		using namespace boost;
+		posix_time::ptime due_time;
+		if (!get_next_interval (&due_time)) {
+			LOG(ERROR) << "Cannot calculate next interval.";
+			return false;
+		}
 /* convert Boost Posix Time into a Chrono time point */
-	const auto time = to_unix_epoch<std::time_t> (due_time);
-	const auto tp = chrono::system_clock::from_time_t (time);
+		const auto time = to_unix_epoch<std::time_t> (due_time);
+		const auto tp = chrono::system_clock::from_time_t (time);
 
-	const chrono::seconds td (std::stoul (config_.interval));
-	timer_.reset (new time_pump_t<chrono::system_clock> (tp, td, this));
-	if (!(bool)timer_) {
-		LOG(ERROR) << "Cannot create time pump.";
+		const chrono::seconds td (std::stoul (config_.interval));
+		timer_.reset (new time_pump_t<chrono::system_clock> (tp, td, this));
+		if (!(bool)timer_) {
+			LOG(ERROR) << "Cannot create time pump.";
+			return false;
+		}
+		timer_thread_.reset (new thread (*timer_.get()));
+		if (!(bool)timer_thread_) {
+			LOG(ERROR) << "Cannot spawn timer thread.";
+			return false;
+		}
+		LOG(INFO) << "Added periodic timer, interval " << td.count() << " seconds"
+			", offset " << config_.time_offset_constant <<
+			", due time " << posix_time::to_simple_string (due_time);
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "Timer::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
 		return false;
 	}
-	timer_thread_.reset (new thread (*timer_.get()));
-	if (!(bool)timer_thread_) {
-		LOG(ERROR) << "Cannot spawn timer thread.";
-		return false;
-	}
-	LOG(INFO) << "Added periodic timer, interval " << td.count() << " seconds"
-		", offset " << config_.time_offset_constant <<
-		", due time " << posix_time::to_simple_string (due_time);
 	return true;
 }
 
@@ -669,7 +699,7 @@ psych::psych_t::processTimer (
 	const boost::chrono::time_point<boost::chrono::system_clock>& t
 	)
 {
-/* calculate timer accuracy, typically 15-1ms with default timer resolution.
+/* Report timer accuracy, typically 15-1ms with default timer resolution.
  */
 	if (DLOG_IS_ON(INFO)) {
 		using namespace boost::chrono;
@@ -693,12 +723,16 @@ psych::psych_t::processTimer (
 
 	try {
 		httpPsychQuery (connections_, QUERY_HTTP_KEEPALIVE | QUERY_IF_MODIFIED_SINCE);
-	} catch (rfa::common::InvalidUsageException& e) {
+	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
 			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
 			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 			" }";
+	} catch (const std::exception& e) {
+		LOG(ERROR) << "httpPsychQuery::Exception: { "
+			"\"What\": \"" << e.what() << "\" }";
+		return false;
 	}
 	return true;
 }
@@ -955,7 +989,7 @@ psych::psych_t::httpPsychQuery (
 			", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
 			" }";
 
-		cumulative_stats_[PSYCH_PC_HTTP_REQUEST_SENT] += pending.size();
+		cumulative_stats_[PSYCH_PC_HTTP_REQUEST_SENT] += static_cast<uint32_t> (pending.size());
 
 		while (running_handles > 0)
 		{
@@ -1023,12 +1057,15 @@ psych::psych_t::httpPsychQuery (
 				{
 					try {
 						sendRefresh (connection->resource, engine_version, open_time, close_time, columns, rows);
-					} catch (rfa::common::InvalidUsageException& e) {
+					} catch (const rfa::common::InvalidUsageException& e) {
 						LOG(ERROR) << "InvalidUsageException: { "
 							  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
 							", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
 							", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 							" }";
+					} catch (const std::exception& e) {
+						LOG(ERROR) << "sendRefresh::Exception: { "
+								"\"What\": \"" << e.what() << "\" }";
 					}
 /* ignoring RFA, request is now considered successful */
 					const CURLMcode curl_merrno = curl_multi_remove_handle (multipass_.get(), connection->handle.get());
@@ -1080,9 +1117,7 @@ psych::psych_t::httpPsychQuery (
 	}
 
 	VLOG(2) << "curl cleanup.";
-	std::for_each (connections.begin(), connections.end(),
-		[](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
-	{
+	std::for_each (connections.begin(), connections.end(), [](std::pair<resource_t, std::shared_ptr<connection_t>> pair) {
 		pair.second->handle.reset();
 	});
 
@@ -1531,14 +1566,17 @@ psych::psych_t::sendRefresh (
  * constructed messages of these types conform to the Reuters Domain
  * Models as specified in RFA API 7 RDM Usage Guide.
  */
-		RFA_String warningText;
-		const uint8_t validation_status = response.validateMsg (&warningText);
-		if (rfa::message::MsgValidationWarning == validation_status) {
-			LOG(ERROR) << "respMsg::validateMsg: { "
-				"\"warningText\": \"" << warningText << "\""
-				"}";
-		} else {
-			assert (rfa::message::MsgValidationOk == validation_status);
+		uint8_t validation_status = rfa::message::MsgValidationError;
+		try {
+			RFA_String warningText;
+			validation_status = response.validateMsg (&warningText);
+			if (rfa::message::MsgValidationWarning == validation_status)
+				LOG(ERROR) << "respMsg::validateMsg: { "\"warningText\": \"" << warningText << "\" }";
+		} catch (const rfa::common::InvalidUsageException& e) {
+			LOG(ERROR) << "InvalidUsageException: { " <<
+				   "\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+				", " << response <<
+			      " }";
 		}
 #endif
 		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
