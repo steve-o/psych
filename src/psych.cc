@@ -42,6 +42,7 @@ static const uint32_t kPsychMagic (FOURCC ('#', ' ', 'M', 'a'));
 /* Custom user-agent */
 static const char* kHttpUserAgent = "psych/%u.%u.%u";
 
+/* Reference count for init and shutdown of libcurl as it is not re-entrant. */
 LONG volatile psych::psych_t::curl_ref_count_ = 0;
 
 /* RDM Usage Guide: Section 6.5: Enterprise Platform
@@ -50,7 +51,7 @@ LONG volatile psych::psych_t::curl_ref_count_ = 0;
  */
 static const int kDictionaryId = 1;
 
-/* RDM: Absolutely no idea. */
+/* RDM: NASD_BIDASK defacto standard record template. */
 static const int kFieldListId = 3;
 
 /* RDM FIDs. */
@@ -76,13 +77,17 @@ static const char* kResetFunctionName = "psych_hard_republish";
 /* http://en.wikipedia.org/wiki/Unix_epoch */
 static const boost::gregorian::date kUnixEpoch (1970, 1, 1);
 
+/* Unique instance identifier for SNMP */
 LONG volatile psych::psych_t::instance_count_ = 0;
 
+/* List of all instances for SNMP walking */
 std::list<psych::psych_t*> psych::psych_t::global_list_;
 boost::shared_mutex psych::psych_t::global_list_lock_;
 
+/* Global weak pointer to shutdown event pump thread */
 static std::weak_ptr<rfa::common::EventQueue> g_event_queue;
 
+/* Avoid using redundent namespace and prefix */
 using rfa::common::RFA_String;
 
 /* Convert Posix time to Unix Epoch time.
@@ -97,6 +102,9 @@ to_unix_epoch (
 	return (t - boost::posix_time::ptime (kUnixEpoch)).total_seconds();
 }
 
+/* Low level HTTP tracing for both request and responses.
+ * Enable with verbose logging.
+ */
 static
 int
 on_http_trace (
@@ -190,7 +198,7 @@ on_http_header (
 							"Jul", "Aug", "Sep", "Oct", "Nov", "Dec" };
 			for (size_t i = 0; i < _countof (months); ++i) {
 				if (0 == strcmp (months[i], MMM)) {
-					pt_tm.tm_mon = i;
+					pt_tm.tm_mon = static_cast<int> (i);
 					break;
 				}
 			}
@@ -227,9 +235,13 @@ on_http_data (
 {
 	auto connection = static_cast<psych::connection_t*> (userdata);
 	assert (nullptr != connection);
-	char *effective_url = nullptr;
-	curl_easy_getinfo (connection->handle.get(), CURLINFO_EFFECTIVE_URL, &effective_url);
-	VLOG(3) << size << 'x' << nmemb << " for: " << effective_url;
+/* Dump dataflow trace by URL */
+	if (VLOG_IS_ON(3)) {
+		char *effective_url = nullptr;
+		curl_easy_getinfo (connection->handle.get(), CURLINFO_EFFECTIVE_URL, &effective_url);
+		VLOG(3) << size << 'x' << nmemb << " for: " << effective_url;
+	}
+/* Prevent large downloads or non-terminating streams. */
 	if ((connection->data.size() + (size * nmemb)) > connection->data.capacity()) {
 		LOG(WARNING) << "Aborting long transfer for " << connection->url;
 		return 0;
@@ -254,13 +266,14 @@ psych::psych_t::psych_t() :
 /* Unique instance number, never decremented. */
 	instance_ = InterlockedExchangeAdd (&instance_count_, 1L);
 
+/* Add to global list of all instances. */
 	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
 	global_list_.push_back (this);
 }
 
 psych::psych_t::~psych_t()
 {
-/* Remove from list before clearing. */
+/* Remove from list before clearing state. */
 	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
 	global_list_.remove (this);
 
