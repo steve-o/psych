@@ -57,7 +57,7 @@ psych::session_t::~session_t()
  * functionality before being able to acquire the runtime library version.
  */
 bool
-psych::session_t::init()
+psych::session_t::Init()
 {
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
@@ -73,7 +73,7 @@ psych::session_t::init()
  * of the RFA session can continue.
  */
 bool
-psych::session_t::createOMMProvider()
+psych::session_t::CreateOMMProvider()
 {
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 
@@ -92,7 +92,7 @@ psych::session_t::createOMMProvider()
 	if (nullptr == error_item_handle_)
 		return false;
 
-	return sendLoginRequest();
+	return SendLoginRequest();
 }
 
 /* 7.3.5.3 Making a Login Request	
@@ -100,7 +100,7 @@ psych::session_t::createOMMProvider()
  * interactive provider applications.
  */
 bool
-psych::session_t::sendLoginRequest()
+psych::session_t::SendLoginRequest()
 {
 	VLOG(2) << prefix_<< "Sending login request.";
 	rfa::message::ReqMsg request;
@@ -216,7 +216,7 @@ psych::session_t::sendLoginRequest()
 }
 
 bool
-psych::session_t::createItemStream (
+psych::session_t::CreateItemStream (
 	const char* name,
 	rfa::sessionLayer::ItemToken** token
 	)
@@ -241,29 +241,29 @@ psych::session_t::createItemStream (
  * The Cmd may be created on the heap or the stack.
  */
 uint32_t
-psych::session_t::send (
-	rfa::common::Msg& msg,
-	rfa::sessionLayer::ItemToken& token,
+psych::session_t::Send (
+	rfa::message::RespMsg*const msg,
+	rfa::sessionLayer::ItemToken*const token,
 	void* closure
 	)
 {
 	if (is_muted_)
 		return false;
 
-	return submit (msg, token, closure);
+	return Submit (msg, token, closure);
 }
 
 uint32_t
-psych::session_t::submit (
-	rfa::common::Msg& msg,
-	rfa::sessionLayer::ItemToken& token,
+psych::session_t::Submit (
+	rfa::message::RespMsg*const msg,
+	rfa::sessionLayer::ItemToken*const token,
 	void* closure
 	)
 {
 	rfa::sessionLayer::OMMItemCmd itemCmd;
-	itemCmd.setMsg (msg);
+	itemCmd.setMsg (*static_cast<rfa::common::Msg*const> (msg));
 /* 7.5.9.7 Set the unique item identifier. */
-	itemCmd.setItemToken (&token);
+	itemCmd.setItemToken (token);
 /* 7.5.9.8 Write the response message directly out to the network through the
  * connection.
  */
@@ -284,11 +284,11 @@ psych::session_t::processEvent (
 	last_activity_ = boost::posix_time::microsec_clock::universal_time();
 	switch (event_.getType()) {
 	case rfa::sessionLayer::OMMItemEventEnum:
-		processOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
+		OnOMMItemEvent (static_cast<const rfa::sessionLayer::OMMItemEvent&>(event_));
 		break;
 
         case rfa::sessionLayer::OMMCmdErrorEventEnum:
-                processOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
+                OnOMMCmdErrorEvent (static_cast<const rfa::sessionLayer::OMMCmdErrorEvent&>(event_));
                 break;
 
         default:
@@ -301,7 +301,7 @@ psych::session_t::processEvent (
 /* 7.5.8.1 Handling Item Events (Login Events).
  */
 void
-psych::session_t::processOMMItemEvent (
+psych::session_t::OnOMMItemEvent (
 	const rfa::sessionLayer::OMMItemEvent&	item_event
 	)
 {
@@ -316,11 +316,11 @@ psych::session_t::processOMMItemEvent (
 		return;
 	}
 
-	processRespMsg (static_cast<const rfa::message::RespMsg&>(msg));
+	OnRespMsg (static_cast<const rfa::message::RespMsg&>(msg));
 }
 
 void
-psych::session_t::processRespMsg (
+psych::session_t::OnRespMsg (
 	const rfa::message::RespMsg&	reply_msg
 	)
 {
@@ -343,11 +343,11 @@ psych::session_t::processRespMsg (
 	case rfa::common::RespStatus::OpenEnum:
 		switch (data_state_) {
 		case rfa::common::RespStatus::OkEnum:
-			processLoginSuccess (reply_msg);
+			OnLoginSuccess (reply_msg);
 			break;
 
 		case rfa::common::RespStatus::SuspectEnum:
-			processLoginSuspect (reply_msg);
+			OnLoginSuspect (reply_msg);
 			break;
 
 		default:
@@ -358,7 +358,7 @@ psych::session_t::processRespMsg (
 		break;
 
 	case rfa::common::RespStatus::ClosedEnum:
-		processLoginClosed (reply_msg);
+		OnLoginClosed (reply_msg);
 		break;
 
 	default:
@@ -375,19 +375,19 @@ psych::session_t::processRespMsg (
  * response messages of different message model types.
  */
 void
-psych::session_t::processLoginSuccess (
+psych::session_t::OnLoginSuccess (
 	const rfa::message::RespMsg&			login_msg
 	)
 {
 	cumulative_stats_[SESSION_PC_MMT_LOGIN_SUCCESS_RECEIVED]++;
 	try {
-		sendDirectoryResponse();
-		resetTokens();
+		SendDirectoryResponse();
+		ResetTokens();
 		LOG(INFO) << prefix_ << "Unmuting provider.";
 		is_muted_ = false;
 
 /* ignore any error */
-	} catch (rfa::common::InvalidUsageException& e) {
+	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::InvalidUsageException: { "
 					"\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 					" }";
@@ -405,7 +405,7 @@ psych::session_t::processLoginSuccess (
  * and any item group information associated with the service.
  */
 bool
-psych::session_t::sendDirectoryResponse()
+psych::session_t::SendDirectoryResponse()
 {
 	VLOG(2) << prefix_ << "Sending directory response.";
 
@@ -449,7 +449,7 @@ psych::session_t::sendDirectoryResponse()
  */
 // not std::map :(  derived from rfa::common::Data
 	rfa::data::Map map;
-	provider_.getServiceDirectory (map);
+	provider_.GetServiceDirectory (&map);
 	response.setPayload (map);
 
 	rfa::common::RespStatus status;
@@ -465,20 +465,24 @@ psych::session_t::sendDirectoryResponse()
  * constructed messages of these types conform to the Reuters Domain
  * Models as specified in RFA API 7 RDM Usage Guide.
  */
-	RFA_String warningText;
-	uint8_t validation_status = response.validateMsg (&warningText);
-	if (rfa::message::MsgValidationWarning == validation_status) {
+	uint8_t validation_status = rfa::message::MsgValidationError;
+	try {
+		RFA_String warningText;
+		validation_status = response.validateMsg (&warningText);
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_VALIDATED]++;
-		LOG(ERROR) << prefix_ << "MMT_DIRECTORY::validateMsg: { "
-					"\"warningText\": \"" << warningText << "\""
-					" }";
-	} else {
+		if (rfa::message::MsgValidationWarning == validation_status)
+			LOG(ERROR) << prefix_ << "respMsg::validateMsg: { \"warningText\": \"" << warningText << "\" }";
+	} catch (const rfa::common::InvalidUsageException& e) {
 		cumulative_stats_[SESSION_PC_MMT_DIRECTORY_MALFORMED]++;
-		assert (rfa::message::MsgValidationOk == validation_status);
+		LOG(ERROR) << prefix_ << "InvalidUsageException: { " <<
+			   "\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
+			", " << response <<
+		      " }";
+		return false;
 	}
 
 /* Create and throw away first token for MMT_DIRECTORY. */
-	submit (static_cast<rfa::common::Msg&> (response), omm_provider_->generateItemToken(), nullptr);
+	Submit (&response, &( omm_provider_->generateItemToken() ), nullptr);
 	cumulative_stats_[SESSION_PC_MMT_DIRECTORY_SENT]++;
 	return true;
 }
@@ -486,7 +490,7 @@ psych::session_t::sendDirectoryResponse()
 /* Iterate through entire item dictionary and re-generate tokens.
  */
 bool
-psych::session_t::resetTokens()
+psych::session_t::ResetTokens()
 {
 	if (!(bool)omm_provider_) {
 		LOG(WARNING) << prefix_ << "Reset tokens whilst invalid provider.";
@@ -495,9 +499,7 @@ psych::session_t::resetTokens()
 
 	LOG(INFO) << prefix_ << "Resetting " << provider_.directory_.size() << " provider tokens";
 /* Cannot use std::for_each (auto λ) due to language limitations. */
-	std::for_each (provider_.directory_.begin(), provider_.directory_.end(),
-		[&](std::pair<std::string, std::weak_ptr<item_stream_t>> it)
-	{
+	std::for_each (provider_.directory_.begin(), provider_.directory_.end(), [&](std::pair<std::string, std::weak_ptr<item_stream_t>> it) {
 		if (auto sp = it.second.lock()) {
 			sp->token[instance_id_] = &( omm_provider_->generateItemToken() );
 			assert (nullptr != sp->token[instance_id_]);
@@ -512,7 +514,7 @@ psych::session_t::resetTokens()
  * resume once the data state becomes OkEnum.
  */
 void
-psych::session_t::processLoginSuspect (
+psych::session_t::OnLoginSuspect (
 	const rfa::message::RespMsg&	suspect_msg
 	)
 {
@@ -526,7 +528,7 @@ psych::session_t::processLoginSuspect (
  * cannot start to publish data.
  */
 void
-psych::session_t::processLoginClosed (
+psych::session_t::OnLoginClosed (
 	const rfa::message::RespMsg&	logout_msg
 	)
 {
@@ -542,7 +544,7 @@ psych::session_t::processLoginClosed (
  * failed.
  */
 void
-psych::session_t::processOMMCmdErrorEvent (
+psych::session_t::OnOMMCmdErrorEvent (
 	const rfa::sessionLayer::OMMCmdErrorEvent& error
 	)
 {

@@ -5,13 +5,13 @@
 #define __ERROR_HH__
 #pragma once
 
-namespace psych
+namespace internal
 {
 
 	const char* severity_string (const int severity_);
 	const char* classification_string (const int classification_);
 
-} /* namespace psych */
+} /* namespace internal */
 
 #endif /* __ERROR_HH__ */
 

@@ -101,7 +101,7 @@ logging::rfa::LogEventProvider::processEvent (
 {
 	switch (event_.getType()) {
 	case ::rfa::logger::LoggerNotifyEventEnum:
-		processLoggerNotifyEvent (static_cast<const ::rfa::logger::LoggerNotifyEvent&> (event_));
+		OnLoggerNotifyEvent (static_cast<const ::rfa::logger::LoggerNotifyEvent&> (event_));
 		break;
 
         default: break;
@@ -127,7 +127,7 @@ std::ostream& operator<< (std::ostream& o, const ::rfa::logger::LoggerNotifyEven
 /* RFA log event callback.
  */
 void
-logging::rfa::LogEventProvider::processLoggerNotifyEvent (
+logging::rfa::LogEventProvider::OnLoggerNotifyEvent (
 	const ::rfa::logger::LoggerNotifyEvent& event_
 	)
 {

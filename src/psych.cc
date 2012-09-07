@@ -277,7 +277,7 @@ psych::psych_t::~psych_t()
 	boost::unique_lock<boost::shared_mutex> (global_list_lock_);
 	global_list_.remove (this);
 
-	clear();
+	Clear();
 }
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
@@ -312,8 +312,8 @@ psych::psych_t::init (
 		is_shutdown_ = true;
 		throw vpf::UserPluginException ("Invalid configuration, aborting.");
 	}
-	if (!init()) {
-		clear();
+	if (!Init()) {
+		Clear();
 		is_shutdown_ = true;
 		throw vpf::UserPluginException ("Initialization failed, aborting.");
 	}
@@ -321,7 +321,7 @@ psych::psych_t::init (
 #endif /* CONFIG_PSYCH_AS_APPLICATION */
 
 bool
-psych::psych_t::init()
+psych::psych_t::Init()
 {
 /* TODO: split large configuration display into multiple parts */
 	LOG(INFO) << config_;
@@ -371,7 +371,7 @@ psych::psych_t::init()
 	try {
 /* RFA context. */
 		rfa_.reset (new rfa_t (config_));
-		if (!(bool)rfa_ || !rfa_->init())
+		if (!(bool)rfa_ || !rfa_->Init())
 			return false;
 
 /* RFA asynchronous event queue. */
@@ -389,7 +389,7 @@ psych::psych_t::init()
 
 /* RFA provider. */
 		provider_.reset (new provider_t (config_, rfa_, event_queue_));
-		if (!(bool)provider_ || !provider_->init())
+		if (!(bool)provider_ || !provider_->Init())
 			return false;
 
 /* Create state for published instruments.
@@ -413,7 +413,7 @@ psych::psych_t::init()
 					VLOG(1) << "create stream <" << jt->second.first << ">";
 					stream = std::make_shared<broadcast_stream_t> (*it);
 					assert ((bool)stream);
-					if (!provider_->createItemStream (jt->second.first.c_str(), stream))
+					if (!provider_->CreateItemStream (jt->second.first.c_str(), stream))
 						return false;
 					stream_vector_.emplace (std::make_pair (jt->second.first, stream));
 				} else {
@@ -434,14 +434,14 @@ psych::psych_t::init()
 
 	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\" }";
 		return false;
 	} catch (const rfa::common::InvalidConfigurationException& e) {
 		LOG(ERROR) << "InvalidConfigurationException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 			", \"ParameterName\": \"" << e.getParameterName() << "\""
 			", \"ParameterValue\": \"" << e.getParameterValue() << "\" }";
@@ -460,7 +460,7 @@ psych::psych_t::init()
 			LOG(ERROR) << "Cannot create event pump.";
 			return false;
 		}
-		event_thread_.reset (new boost::thread (*event_pump_.get()));
+		event_thread_.reset (new boost::thread ([this]() { event_pump->Run(); }));
 		if (!(bool)event_thread_) {
 			LOG(ERROR) << "Cannot spawn event thread.";
 			return false;
@@ -488,7 +488,7 @@ psych::psych_t::init()
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 	try {
 /* Register Tcl API. */
-		if (!register_tcl_api (getId()))
+		if (!RegisterTclApi (getId()))
 			return false;
 	} catch (const std::exception& e) {
 		LOG(ERROR) << "TclApi::Exception: { "
@@ -500,30 +500,29 @@ psych::psych_t::init()
 	try {
 /* Timer for periodic publishing.
  */
-		using namespace boost;
-		posix_time::ptime due_time;
-		if (!get_next_interval (&due_time)) {
+		boost::posix_time::ptime due_time;
+		if (!GetNextInterval (&due_time)) {
 			LOG(ERROR) << "Cannot calculate next interval.";
 			return false;
 		}
 /* convert Boost Posix Time into a Chrono time point */
 		const auto time = to_unix_epoch<std::time_t> (due_time);
-		const auto tp = chrono::system_clock::from_time_t (time);
+		const auto tp = boost::chrono::system_clock::from_time_t (time);
 
-		const chrono::seconds td (std::stoul (config_.interval));
-		timer_.reset (new time_pump_t<chrono::system_clock> (tp, td, this));
+		const boost::chrono::seconds td (std::stoul (config_.interval));
+		timer_.reset (new time_pump_t<boost::chrono::system_clock> (tp, td, this));
 		if (!(bool)timer_) {
 			LOG(ERROR) << "Cannot create time pump.";
 			return false;
 		}
-		timer_thread_.reset (new thread (*timer_.get()));
+		timer_thread_.reset (new boost::thread ([this](){ timer_->Run(); }));
 		if (!(bool)timer_thread_) {
 			LOG(ERROR) << "Cannot spawn timer thread.";
 			return false;
 		}
 		LOG(INFO) << "Added periodic timer, interval " << td.count() << " seconds"
 			", offset " << config_.time_offset_constant <<
-			", due time " << posix_time::to_simple_string (due_time);
+			", due time " << boost::posix_time::to_simple_string (due_time);
 	} catch (const std::exception& e) {
 		LOG(ERROR) << "Timer::Exception: { "
 			"\"What\": \"" << e.what() << "\" }";
@@ -535,7 +534,7 @@ psych::psych_t::init()
 /* Application entry point.
  */
 int
-psych::psych_t::run()
+psych::psych_t::Run()
 {
 	LOG(INFO) << "{ "
 		  "\"version\": \"" << version_major << '.' << version_minor << '.' << version_build << "\""
@@ -566,16 +565,16 @@ psych::psych_t::run()
 	root.reset (chromium::JSONReader::Read (json, false));
 	CHECK (root.get());
 	CHECK (root->IsType (chromium::Value::TYPE_DICTIONARY));
-	if (!config_.parseConfig (static_cast<chromium::DictionaryValue*>(root.get())))
+	if (!config_.ParseConfig (static_cast<chromium::DictionaryValue*>(root.get())))
 		return EXIT_FAILURE;
 
-	if (!init())
+	if (!Init())
 		return EXIT_FAILURE;
 
 	LOG(INFO) << "Init complete, Entering main loop.";
-	mainLoop();
+	MainLoop();
 	LOG(INFO) << "Main loop terminated.";
-	destroy();
+	Destroy();
 	return EXIT_SUCCESS;
 }
 
@@ -617,7 +616,7 @@ CtrlHandler (
 }
 
 void
-psych::psych_t::mainLoop()
+psych::psych_t::MainLoop()
 {
 /* Add shutdown handler. */
 	::SetConsoleCtrlHandler ((PHANDLER_ROUTINE)::CtrlHandler, TRUE);
@@ -629,7 +628,7 @@ psych::psych_t::mainLoop()
 }
 
 void
-psych::psych_t::clear()
+psych::psych_t::Clear()
 {
 /* Stop generating new events. */
 	if (timer_thread_) {
@@ -672,16 +671,15 @@ psych::psych_t::clear()
 
 /* Plugin exit point.
  */
-
 void
-psych::psych_t::destroy()
+psych::psych_t::Destroy()
 {
 	LOG(INFO) << "Closing instance.";
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Unregister Tcl API. */
-	unregister_tcl_api (getId());
+	UnregisterTclApi (getId());
 #endif
-	clear();
+	Clear();
 	LOG(INFO) << "Runtime summary: {"
 		    " \"tclQueryReceived\": " << cumulative_stats_[PSYCH_PC_TCL_QUERY_RECEIVED] <<
 		   ", \"timerQueryReceived\": " << cumulative_stats_[PSYCH_PC_TIMER_QUERY_RECEIVED] <<
@@ -695,7 +693,7 @@ psych::psych_t::destroy()
 /* callback from periodic timer.
  */
 bool
-psych::psych_t::processTimer (
+psych::psych_t::OnTimer (
 	const boost::chrono::time_point<boost::chrono::system_clock>& t
 	)
 {
@@ -725,8 +723,8 @@ psych::psych_t::processTimer (
 		httpPsychQuery (connections_, QUERY_HTTP_KEEPALIVE | QUERY_IF_MODIFIED_SINCE);
 	} catch (const rfa::common::InvalidUsageException& e) {
 		LOG(ERROR) << "InvalidUsageException: { "
-			  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-			", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+			  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+			", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 			", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 			" }";
 	} catch (const std::exception& e) {
@@ -740,7 +738,7 @@ psych::psych_t::processTimer (
 /* Calculate the next bin close timestamp for the requested timezone.
  */
 bool
-psych::psych_t::get_next_interval (
+psych::psych_t::GetNextInterval (
 	boost::posix_time::ptime* t
 	)
 {
@@ -789,9 +787,7 @@ psych::psych_t::httpPsychQuery (
 /* retries are handled on a carousel basis, one round tries every connection queued. */
 	std::vector<std::shared_ptr<connection_t>> pending;
 	pending.reserve (connections.size());
-	std::for_each (connections.begin(), connections.end(),
-		[&pending](std::pair<resource_t, std::shared_ptr<connection_t>> pair)
-	{
+	std::for_each (connections.begin(), connections.end(), [&pending](std::pair<resource_t, std::shared_ptr<connection_t>> pair) {
 		pending.emplace_back (pair.second);
 	});
 
@@ -804,8 +800,7 @@ psych::psych_t::httpPsychQuery (
 /* big phat loop */
 	for(;;)
 	{
-		std::for_each (pending.begin(), pending.end(),
-			[&](std::shared_ptr<connection_t> connection)
+		std::for_each (pending.begin(), pending.end(), [&](std::shared_ptr<connection_t> connection)
 		{
 			VLOG(2) << "preparing URL " << connection->url;
 			connection->handle.reset (curl_easy_init());
@@ -1053,14 +1048,14 @@ psych::psych_t::httpPsychQuery (
 				auto connection = static_cast<connection_t*> (ptr);
 				open_time = close_time = not_a_date_time;
 				columns.clear(); rows.clear();
-				if (processHttpResponse (connection, &engine_version, &open_time, &close_time, &columns, &rows))
+				if (OnHttpResponse (connection, &engine_version, &open_time, &close_time, &columns, &rows))
 				{
 					try {
-						sendRefresh (connection->resource, engine_version, open_time, close_time, columns, rows);
+						SendRefresh (connection->resource, engine_version, open_time, close_time, columns, rows);
 					} catch (const rfa::common::InvalidUsageException& e) {
 						LOG(ERROR) << "InvalidUsageException: { "
-							  "\"Severity\": \"" << severity_string (e.getSeverity()) << "\""
-							", \"Classification\": \"" << classification_string (e.getClassification()) << "\""
+							  "\"Severity\": \"" << internal::severity_string (e.getSeverity()) << "\""
+							", \"Classification\": \"" << internal::classification_string (e.getClassification()) << "\""
 							", \"StatusText\": \"" << e.getStatus().getStatusText() << "\""
 							" }";
 					} catch (const std::exception& e) {
@@ -1074,9 +1069,7 @@ psych::psych_t::httpPsychQuery (
 						", \"text\": \"" << curl_multi_strerror (curl_merrno) << "\""
 						" }";
 /* remove from pending queue */
-					pending.erase (std::remove_if (pending.begin(),
-						pending.end(),
-						[ptr](std::shared_ptr<connection_t>& connection) -> bool {
+					pending.erase (std::remove_if (pending.begin(), pending.end(), [ptr](std::shared_ptr<connection_t>& connection) -> bool {
 							return connection.get() == ptr;
 					}));
 				}
@@ -1133,7 +1126,7 @@ psych::psych_t::httpPsychQuery (
 }
 
 bool
-psych::psych_t::processHttpResponse (
+psych::psych_t::OnHttpResponse (
 	connection_t* connection,
 	std::string* engine_version,
 	boost::posix_time::ptime* open_time,
@@ -1399,7 +1392,7 @@ psych::psych_t::processHttpResponse (
 }
 
 bool
-psych::psych_t::sendRefresh (
+psych::psych_t::SendRefresh (
 	const psych::resource_t& resource,
 	const std::string& engine_version,
 	const boost::posix_time::ptime& open_time,
@@ -1442,7 +1435,7 @@ psych::psych_t::sendRefresh (
 
 /* 4.3.1 RespMsg.Payload */
 // not std::map :(  derived from rfa::common::Data
-	fields_.setAssociatedMetaInfo (provider_->getRwfMajorVersion(), provider_->getRwfMinorVersion());
+	fields_.setAssociatedMetaInfo (provider_->GetRwfMajorVersion(), provider_->GetRwfMinorVersion());
 	fields_.setInfo (kDictionaryId, kFieldListId);
 
 /* Prepare common fields. */
@@ -1555,7 +1548,7 @@ psych::psych_t::sendRefresh (
 		if (!config_.dacs_id.empty()) {
 			rfa::common::RFA_Vector<unsigned long> peList (1);
 			peList.push_back (resource.entitlement_code);
-			if (generatePELock (&buf, peList)) {
+			if (GeneratePELock (&buf, peList)) {
 				manifest.setPermissionData (buf);
 				response.setManifest (manifest);
 			}
@@ -1571,7 +1564,7 @@ psych::psych_t::sendRefresh (
 			RFA_String warningText;
 			validation_status = response.validateMsg (&warningText);
 			if (rfa::message::MsgValidationWarning == validation_status)
-				LOG(ERROR) << "respMsg::validateMsg: { "\"warningText\": \"" << warningText << "\" }";
+				LOG(ERROR) << "respMsg::validateMsg: { \"warningText\": \"" << warningText << "\" }";
 		} catch (const rfa::common::InvalidUsageException& e) {
 			LOG(ERROR) << "InvalidUsageException: { " <<
 				   "\"StatusText\": \"" << e.getStatus().getStatusText() << "\""
@@ -1579,7 +1572,7 @@ psych::psych_t::sendRefresh (
 			      " }";
 		}
 #endif
-		provider_->send (*stream.get(), static_cast<rfa::common::Msg&> (response));
+		provider_->Send (stream.get(), &response);
 	});
 
 	return true;
@@ -1597,7 +1590,7 @@ psych::psych_t::sendRefresh (
  * permissions.
  */
 bool
-psych::psych_t::generatePELock (
+psych::psych_t::GeneratePELock (
 	rfa::common::Buffer* buf,
 	const rfa::common::RFA_Vector<unsigned long>& peList
 	)

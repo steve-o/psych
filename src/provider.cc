@@ -59,10 +59,10 @@ psych::provider_t::~provider_t()
 }
 
 bool
-psych::provider_t::init()
+psych::provider_t::Init()
 {
 	std::for_each (sessions_.begin(), sessions_.end(), [](std::unique_ptr<session_t>& it) {
-		it->init ();
+		it->Init ();
 	});
 
 /* 6.2.2.1 RFA Version Info.  The version is only available if an application
@@ -72,7 +72,7 @@ psych::provider_t::init()
 		return false;
 
 	std::for_each (sessions_.begin(), sessions_.end(), [](std::unique_ptr<session_t>& it) {
-		it->createOMMProvider ();
+		it->CreateOMMProvider ();
 	});
 
 	return true;
@@ -82,7 +82,7 @@ psych::provider_t::init()
  * the provider state on behalf of the application.
  */
 bool
-psych::provider_t::createItemStream (
+psych::provider_t::CreateItemStream (
 	const char* name,
 	std::shared_ptr<item_stream_t> item_stream
 	)
@@ -92,12 +92,10 @@ psych::provider_t::createItemStream (
 	item_stream->token.resize (sessions_.size());
 	item_stream->token.shrink_to_fit();
 	unsigned i = 0;
-	std::for_each (sessions_.begin(), sessions_.end(),
-		[&name, &item_stream, &i](std::unique_ptr<session_t>& it)
-	{
+	std::for_each (sessions_.begin(), sessions_.end(), [name, &item_stream, &i](std::unique_ptr<session_t>& it) {
 		assert ((bool)it);
 		assert (!item_stream->token.empty());
-		it->createItemStream (name, &item_stream->token[i]);
+		it->CreateItemStream (name, &item_stream->token[i]);
 		++i;
 	});
 	const std::string key (name);
@@ -113,18 +111,16 @@ psych::provider_t::createItemStream (
  */
 
 bool
-psych::provider_t::send (
-	item_stream_t& item_stream,
-	rfa::common::Msg& msg
+psych::provider_t::Send (
+	item_stream_t*const item_stream,
+	rfa::message::RespMsg*const msg
 )
 {
 	unsigned i = 0;
-	std::for_each (sessions_.begin(), sessions_.end(),
-		[&item_stream, &msg, &i](std::unique_ptr<session_t>& it)
-	{
+	std::for_each (sessions_.begin(), sessions_.end(), [item_stream, msg, &i](std::unique_ptr<session_t>& it) {
 		assert ((bool)it);
-		assert (!item_stream.token.empty());
-		it->send (msg, *item_stream.token[i], nullptr);
+		assert (!item_stream-<token.empty());
+		it->Send (msg, item_stream->token[i], nullptr);
 		++i;
 	});
 	cumulative_stats_[PROVIDER_PC_MSGS_SENT]++;
@@ -133,8 +129,8 @@ psych::provider_t::send (
 }
 
 void
-psych::provider_t::getServiceDirectory (
-	rfa::data::Map& map
+psych::provider_t::GetServiceDirectory (
+	rfa::data::Map*const map
 	)
 {
 	rfa::data::MapWriteIterator it;
@@ -143,19 +139,19 @@ psych::provider_t::getServiceDirectory (
 	rfa::data::FilterList filterList;
 	const RFA_String serviceName (config_.service_name.c_str(), 0, false);
 
-	map.setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
-	it.start (map);
+	map->setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
+	it.start (*map);
 
 /* No idea ... */
-	map.setKeyDataType (rfa::data::DataBuffer::StringAsciiEnum);
+	map->setKeyDataType (rfa::data::DataBuffer::StringAsciiEnum);
 /* One service. */
-	map.setTotalCountHint (1);
+	map->setTotalCountHint (1);
 
 /* Service name -> service filter list */
 	mapEntry.setAction (rfa::data::MapEntry::Add);
 	dataBuffer.setFromString (serviceName, rfa::data::DataBuffer::StringAsciiEnum);
 	mapEntry.setKeyData (dataBuffer);
-	getServiceFilterList (filterList);
+	GetServiceFilterList (&filterList);
 	mapEntry.setData (static_cast<rfa::common::Data&>(filterList));
 	it.bind (mapEntry);
 
@@ -164,31 +160,31 @@ psych::provider_t::getServiceDirectory (
 }
 
 void
-psych::provider_t::getServiceFilterList (
-	rfa::data::FilterList& filterList
+psych::provider_t::GetServiceFilterList (
+	rfa::data::FilterList*const filterList
 	)
 {
 	rfa::data::FilterListWriteIterator it;
 	rfa::data::FilterEntry filterEntry;
 	rfa::data::ElementList elementList;
 
-	filterList.setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
-	it.start (filterList);  
+	filterList->setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
+	it.start (*filterList);  
 
 /* SERVICE_INFO_ID and SERVICE_STATE_ID */
-	filterList.setTotalCountHint (2);
+	filterList->setTotalCountHint (2);
 
 /* SERVICE_INFO_ID */
 	filterEntry.setFilterId (rfa::rdm::SERVICE_INFO_ID);
 	filterEntry.setAction (rfa::data::FilterEntry::Set);
-	getServiceInformation (elementList);
+	GetServiceInformation (&elementList);
 	filterEntry.setData (static_cast<const rfa::common::Data&>(elementList));
 	it.bind (filterEntry);
 
 /* SERVICE_STATE_ID */
 	filterEntry.setFilterId (rfa::rdm::SERVICE_STATE_ID);
 	filterEntry.setAction (rfa::data::FilterEntry::Set);
-	getServiceState (elementList);
+	GetServiceState (&elementList);
 	filterEntry.setData (static_cast<const rfa::common::Data&>(elementList));
 	it.bind (filterEntry);
 
@@ -199,8 +195,8 @@ psych::provider_t::getServiceFilterList (
  * Information about a service that does not update very often.
  */
 void
-psych::provider_t::getServiceInformation (
-	rfa::data::ElementList& elementList
+psych::provider_t::GetServiceInformation (
+	rfa::data::ElementList*const elementList
 	)
 {
 	rfa::data::ElementListWriteIterator it;
@@ -210,8 +206,8 @@ psych::provider_t::getServiceInformation (
 	const RFA_String serviceName (config_.service_name.c_str(), 0, false);
 	const RFA_String vendorName (config_.vendor_name.c_str(), 0, false);
 
-	elementList.setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
-	it.start (elementList);
+	elementList->setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
+	it.start (*elementList);
 
 /* Name<AsciiString>
  * Service name. This will match the concrete service name or the service group
@@ -238,7 +234,7 @@ psych::provider_t::getServiceInformation (
  * service if the MessageModelType of the request is listed in this element.
  */
 	element.setName (rfa::rdm::ENAME_CAPABILITIES);
-	getServiceCapabilities (array_);
+	GetServiceCapabilities (&array_);
 	element.setData (static_cast<const rfa::common::Data&>(array_));
 	it.bind (element);
 
@@ -248,14 +244,14 @@ psych::provider_t::getServiceInformation (
  * the needs of the consumer (e.g. display application, caching application)
  */
 	element.setName (rfa::rdm::ENAME_DICTIONARYS_USED);
-	getServiceDictionaries (array_);
+	GetServiceDictionaries (&array_);
 	element.setData (static_cast<const rfa::common::Data&>(array_));
 	it.bind (element);
 
 /* src_dist requires a QoS */
-#if 1
+#ifndef SRC_DIST_REQUIRES_QOS_FIXED
 	element.setName (rfa::rdm::ENAME_QOS);
-	getDirectoryQoS (array_);
+	GetDirectoryQoS (&array_);
 	element.setData (static_cast<const rfa::common::Data&>(array_));
 	it.bind (element);
 #endif
@@ -267,15 +263,15 @@ psych::provider_t::getServiceInformation (
  * rfa::data::Array does not require version tagging according to examples.
  */
 void
-psych::provider_t::getServiceCapabilities (
-	rfa::data::Array& capabilities
+psych::provider_t::GetServiceCapabilities (
+	rfa::data::Array*const capabilities
 	)
 {
 	rfa::data::ArrayWriteIterator it;
 	rfa::data::ArrayEntry arrayEntry;
 	rfa::data::DataBuffer dataBuffer;
 
-	it.start (capabilities);
+	it.start (*capabilities);
 
 /* MarketPrice = 6 */
 	dataBuffer.setUInt32 (rfa::rdm::MMT_MARKET_PRICE);
@@ -286,15 +282,15 @@ psych::provider_t::getServiceCapabilities (
 }
 
 void
-psych::provider_t::getServiceDictionaries (
-	rfa::data::Array& dictionaries
+psych::provider_t::GetServiceDictionaries (
+	rfa::data::Array*const dictionaries
 	)
 {
 	rfa::data::ArrayWriteIterator it;
 	rfa::data::ArrayEntry arrayEntry;
 	rfa::data::DataBuffer dataBuffer;
 
-	it.start (dictionaries);
+	it.start (*dictionaries);
 
 /* RDM Field Dictionary */
 	dataBuffer.setFromString (kRdmFieldDictionaryName, rfa::data::DataBuffer::StringAsciiEnum);
@@ -310,8 +306,8 @@ psych::provider_t::getServiceDictionaries (
 }
 
 void
-psych::provider_t::getDirectoryQoS (
-	rfa::data::Array& qos
+psych::provider_t::GetDirectoryQoS (
+	rfa::data::Array*const qos
 	)
 {
 	rfa::data::ArrayWriteIterator it;
@@ -320,7 +316,7 @@ psych::provider_t::getDirectoryQoS (
 	rfa::common::QualityOfService QoS;
 	rfa::common::QualityOfServiceInfo QoSInfo;
 
-	it.start (qos);
+	it.start (*qos);
 
 /** Primary service QoS **/
 
@@ -348,16 +344,16 @@ psych::provider_t::getDirectoryQoS (
  * State of a service.
  */
 void
-psych::provider_t::getServiceState (
-	rfa::data::ElementList& elementList
+psych::provider_t::GetServiceState (
+	rfa::data::ElementList*const elementList
 	)
 {
 	rfa::data::ElementListWriteIterator it;
 	rfa::data::ElementEntry element;
 	rfa::data::DataBuffer dataBuffer;
 
-	elementList.setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
-	it.start (elementList);
+	elementList->setAssociatedMetaInfo (min_rwf_major_version_, min_rwf_minor_version_);
+	it.start (*elementList);
 
 /* ServiceState<UInt>
  * 1: Up/Yes

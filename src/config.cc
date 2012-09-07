@@ -25,7 +25,7 @@ using namespace xercesc;
 /** L"" prefix is used in preference to u"" because of MSVC2010 **/
 
 bool
-psych::config_t::validate()
+psych::config_t::Validate()
 {
 	if (service_name.empty()) {
 		LOG(ERROR) << "Undefined service name.";
@@ -127,11 +127,11 @@ psych::config_t::validate()
 }
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
-/* parse configuration from provided XML tree.
+/* Parse configuration from provided XML tree.
  */
 
 bool
-psych::config_t::parseDomElement (
+psych::config_t::ParseDomElement (
 	const DOMElement*	root
 	)
 {
@@ -143,7 +143,7 @@ psych::config_t::parseDomElement (
 	nodeList = root->getElementsByTagName (L"config");
 
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseConfigNode (nodeList->item (i))) {
+		if (!ParseConfigNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <config> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -151,7 +151,7 @@ psych::config_t::parseDomElement (
 	if (0 == nodeList->getLength())
 		LOG(WARNING) << "No <config> nodes found in configuration.";
 
-	if (!validate()) {
+	if (!Validate()) {
 		LOG(ERROR) << "Failed validation, malformed configuration file requires correction.";
 		return false;
 	}
@@ -161,7 +161,7 @@ psych::config_t::parseDomElement (
 }
 
 bool
-psych::config_t::parseConfigNode (
+psych::config_t::ParseConfigNode (
 	const DOMNode*		node
 	)
 {
@@ -172,7 +172,7 @@ psych::config_t::parseConfigNode (
 /* <Snmp> */
 	nodeList = elem->getElementsByTagName (L"Snmp");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseSnmpNode (nodeList->item (i))) {
+		if (!ParseSnmpNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Snmp> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -180,7 +180,7 @@ psych::config_t::parseConfigNode (
 /* <Rfa> */
 	nodeList = elem->getElementsByTagName (L"Rfa");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseRfaNode (nodeList->item (i))) {
+		if (!ParseRfaNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <Rfa> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -190,7 +190,7 @@ psych::config_t::parseConfigNode (
 /* <psych> */
 	nodeList = elem->getElementsByTagName (L"psych");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parsePsychNode (nodeList->item (i))) {
+		if (!ParsePsychNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <psych> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -202,7 +202,7 @@ psych::config_t::parseConfigNode (
 
 /* <Snmp> */
 bool
-psych::config_t::parseSnmpNode (
+psych::config_t::ParseSnmpNode (
 	const DOMNode*		node
 	)
 {
@@ -219,7 +219,7 @@ psych::config_t::parseSnmpNode (
 /* <agentX> */
 	nodeList = elem->getElementsByTagName (L"agentX");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseAgentXNode (nodeList->item (i))) {
+		if (!ParseAgentXNode (nodeList->item (i))) {
 			vpf::XMLStringPool xml;
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <agentX> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
@@ -231,7 +231,7 @@ psych::config_t::parseSnmpNode (
 }
 
 bool
-psych::config_t::parseAgentXNode (
+psych::config_t::ParseAgentXNode (
 	const DOMNode*		node
 	)
 {
@@ -255,7 +255,7 @@ psych::config_t::parseAgentXNode (
 
 /* <Rfa> */
 bool
-psych::config_t::parseRfaNode (
+psych::config_t::ParseRfaNode (
 	const DOMNode*		node
 	)
 {
@@ -277,7 +277,7 @@ psych::config_t::parseRfaNode (
 /* <service> */
 	nodeList = elem->getElementsByTagName (L"service");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseServiceNode (nodeList->item (i))) {
+		if (!ParseServiceNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <service> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -288,7 +288,7 @@ psych::config_t::parseRfaNode (
 /* <DACS> */
 	nodeList = elem->getElementsByTagName (L"DACS");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseDacsNode (nodeList->item (i))) {
+		if (!ParseDacsNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <DACS> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -299,7 +299,7 @@ psych::config_t::parseRfaNode (
 /* <session> */
 	nodeList = elem->getElementsByTagName (L"session");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseSessionNode (nodeList->item (i))) {
+		if (!ParseSessionNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <session> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -309,7 +309,7 @@ psych::config_t::parseRfaNode (
 /* <monitor> */
 	nodeList = elem->getElementsByTagName (L"monitor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseMonitorNode (nodeList->item (i))) {
+		if (!ParseMonitorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <monitor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -318,7 +318,7 @@ psych::config_t::parseRfaNode (
 /* <eventQueue> */
 	nodeList = elem->getElementsByTagName (L"eventQueue");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseEventQueueNode (nodeList->item (i))) {
+		if (!ParseEventQueueNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <eventQueue> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -327,7 +327,7 @@ psych::config_t::parseRfaNode (
 /* <vendor> */
 	nodeList = elem->getElementsByTagName (L"vendor");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseVendorNode (nodeList->item (i))) {
+		if (!ParseVendorNode (nodeList->item (i))) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <vendor> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -337,7 +337,7 @@ psych::config_t::parseRfaNode (
 }
 
 bool
-psych::config_t::parseServiceNode (
+psych::config_t::ParseServiceNode (
 	const DOMNode*		node
 	)
 {
@@ -357,7 +357,7 @@ psych::config_t::parseServiceNode (
 }
 
 bool
-psych::config_t::parseDacsNode (
+psych::config_t::ParseDacsNode (
 	const DOMNode*		node
 	)
 {
@@ -373,7 +373,7 @@ psych::config_t::parseDacsNode (
 	return true;
 }
 bool
-psych::config_t::parseSessionNode (
+psych::config_t::ParseSessionNode (
 	const DOMNode*		node
 	)
 {
@@ -392,7 +392,7 @@ psych::config_t::parseSessionNode (
 /* <publisher> */
 	nodeList = elem->getElementsByTagName (L"publisher");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parsePublisherNode (nodeList->item (i), session.publisher_name)) {
+		if (!ParsePublisherNode (nodeList->item (i), session.publisher_name)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <publisher> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -401,7 +401,7 @@ psych::config_t::parseSessionNode (
 /* <connection> */
 	nodeList = elem->getElementsByTagName (L"connection");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseConnectionNode (nodeList->item (i), session)) {
+		if (!ParseConnectionNode (nodeList->item (i), session)) {
 			LOG(ERROR) << "Failed parsing <connection> nth-node #" << (1 + i) << '.';
 			return false;
 		}
@@ -411,7 +411,7 @@ psych::config_t::parseSessionNode (
 /* <login> */
 	nodeList = elem->getElementsByTagName (L"login");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseLoginNode (nodeList->item (i), session)) {
+		if (!ParseLoginNode (nodeList->item (i), session)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <login> nth-node #" << (1 + i) << ": \"" << text_content << "\".";
 			return false;
@@ -425,7 +425,7 @@ psych::config_t::parseSessionNode (
 }
 
 bool
-psych::config_t::parseConnectionNode (
+psych::config_t::ParseConnectionNode (
 	const DOMNode*		node,
 	session_config_t&	session
 	)
@@ -447,7 +447,7 @@ psych::config_t::parseConnectionNode (
 	nodeList = elem->getElementsByTagName (L"server");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		std::string server;
-		if (!parseServerNode (nodeList->item (i), server)) {
+		if (!ParseServerNode (nodeList->item (i), server)) {
 			const std::string text_content = xml.transcode (nodeList->item (i)->getTextContent());
 			LOG(ERROR) << "Failed parsing <server> nth-node #" << (1 + i) << ": \"" << text_content << "\".";			
 			return false;
@@ -461,7 +461,7 @@ psych::config_t::parseConnectionNode (
 }
 
 bool
-psych::config_t::parseServerNode (
+psych::config_t::ParseServerNode (
 	const DOMNode*		node,
 	std::string&		server
 	)
@@ -477,7 +477,7 @@ psych::config_t::parseServerNode (
 }
 
 bool
-psych::config_t::parseLoginNode (
+psych::config_t::ParseLoginNode (
 	const DOMNode*		node,
 	session_config_t&	session
 	)
@@ -497,7 +497,7 @@ psych::config_t::parseLoginNode (
 }
 
 bool
-psych::config_t::parseMonitorNode (
+psych::config_t::ParseMonitorNode (
 	const DOMNode*		node
 	)
 {
@@ -513,7 +513,7 @@ psych::config_t::parseMonitorNode (
 }
 
 bool
-psych::config_t::parseEventQueueNode (
+psych::config_t::ParseEventQueueNode (
 	const DOMNode*		node
 	)
 {
@@ -529,7 +529,7 @@ psych::config_t::parseEventQueueNode (
 }
 
 bool
-psych::config_t::parsePublisherNode (
+psych::config_t::ParsePublisherNode (
 	const DOMNode*		node,
 	std::string&		name
 	)
@@ -543,7 +543,7 @@ psych::config_t::parsePublisherNode (
 }
 
 bool
-psych::config_t::parseVendorNode (
+psych::config_t::ParseVendorNode (
 	const DOMNode*		node
 	)
 {
@@ -562,7 +562,7 @@ psych::config_t::parseVendorNode (
 
 /* <psych> */
 bool
-psych::config_t::parsePsychNode (
+psych::config_t::ParsePsychNode (
 	const DOMNode*		node
 	)
 {
@@ -642,7 +642,7 @@ psych::config_t::parsePsychNode (
 /* <resource> */
 	nodeList = elem->getElementsByTagName (L"resource");
 	for (int i = 0; i < nodeList->getLength(); i++) {
-		if (!parseResourceNode (nodeList->item (i))) {
+		if (!ParseResourceNode (nodeList->item (i))) {
 			LOG(ERROR) << "Failed parsing <resource> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -653,7 +653,7 @@ psych::config_t::parsePsychNode (
 }
 
 bool
-psych::config_t::parseResourceNode (
+psych::config_t::ParseResourceNode (
 	const DOMNode*		node
 	)
 {
@@ -678,7 +678,7 @@ psych::config_t::parseResourceNode (
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		std::string field_name;
 		int field_id;
-		if (!parseFieldNode (nodeList->item (i), &field_name, &field_id)) {
+		if (!ParseFieldNode (nodeList->item (i), &field_name, &field_id)) {
 			LOG(ERROR) << "Failed parsing <field> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -691,7 +691,7 @@ psych::config_t::parseResourceNode (
 	nodeList = elem->getElementsByTagName (L"item");
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		std::string item_name, item_topic, item_src;
-		if (!parseItemNode (nodeList->item (i), &item_name, &item_topic, &item_src)) {
+		if (!ParseItemNode (nodeList->item (i), &item_name, &item_topic, &item_src)) {
 			LOG(ERROR) << "Failed parsing <item> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -705,7 +705,7 @@ psych::config_t::parseResourceNode (
 	for (int i = 0; i < nodeList->getLength(); i++) {
 		std::string link_rel, link_name, link_href;
 		unsigned long link_id;
-		if (!parseLinkNode (nodeList->item (i), &link_name, &link_rel, &link_id, &link_href)) {
+		if (!ParseLinkNode (nodeList->item (i), &link_name, &link_rel, &link_id, &link_href)) {
 			LOG(ERROR) << "Failed parsing <link> nth-node #" << (1 + i) << ".";
 			return false;
 		}
@@ -718,11 +718,11 @@ psych::config_t::parseResourceNode (
 	return true;
 }
 
-/* parse <link rel="resource" id="entitlement code" href="URL"/>
+/* Parse <link rel="resource" id="entitlement code" href="URL"/>
  */
 
 bool
-psych::config_t::parseLinkNode (
+psych::config_t::ParseLinkNode (
 	const DOMNode*		node,
 	std::string*		source,
 	std::string*		rel,
@@ -764,11 +764,11 @@ psych::config_t::parseLinkNode (
 	return true;
 }
 
-/* parse <field name="name" id="id"/>
+/* Parse <field name="name" id="id"/>
  */
 
 bool
-psych::config_t::parseFieldNode (
+psych::config_t::ParseFieldNode (
 	const DOMNode*		node,
 	std::string*		name,
 	int*			id
@@ -798,11 +798,11 @@ psych::config_t::parseFieldNode (
 	return true;
 }
 
-/* parse <item name="name" topic="topic" src="text"/>
+/* Parse <item name="name" topic="topic" src="text"/>
  */
 
 bool
-psych::config_t::parseItemNode (
+psych::config_t::ParseItemNode (
 	const DOMNode*		node,
 	std::string*		name,
 	std::string*		topic,
@@ -842,11 +842,11 @@ psych::config_t::parseItemNode (
 
 #endif /* CONFIG_PSYCH_AS_APPLICATION */
 
-/* parse configuration from provided JSON tree.
+/* Parse configuration from provided JSON tree.
  */
 
 bool
-psych::config_t::parseConfig (
+psych::config_t::ParseConfig (
 	const chromium::DictionaryValue* dict_val
 	)
 {
@@ -883,7 +883,7 @@ psych::config_t::parseConfig (
 		chromium::Value* tmp_value;
 		CHECK (list->Get (i, &tmp_value));
 		CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
-		if (!parseSession (static_cast<chromium::DictionaryValue*>(tmp_value)))
+		if (!ParseSession (static_cast<chromium::DictionaryValue*>(tmp_value)))
 			return false;
 	}
 	dict_val->GetString ("monitor_name", &monitor_name);
@@ -915,11 +915,11 @@ psych::config_t::parseConfig (
 		chromium::Value* tmp_value;
 		CHECK (list->Get (i, &tmp_value));
 		CHECK (tmp_value->IsType (chromium::Value::TYPE_DICTIONARY));
-		if (!parseResource (static_cast<chromium::DictionaryValue*>(tmp_value)))
+		if (!ParseResource (static_cast<chromium::DictionaryValue*>(tmp_value)))
 			return false;
 	}
 
-	if (!validate()) {
+	if (!Validate()) {
 		LOG(ERROR) << "Failed validation, malformed configuration file requires correction.";
 		return false;
 	}
@@ -929,7 +929,7 @@ psych::config_t::parseConfig (
 }
 
 bool
-psych::config_t::parseSession (
+psych::config_t::ParseSession (
 	const chromium::DictionaryValue* dict_val
 	)
 {
@@ -960,7 +960,7 @@ psych::config_t::parseSession (
 }
 
 bool
-psych::config_t::parseResource (
+psych::config_t::ParseResource (
 	const chromium::DictionaryValue* dict_val
 	)
 {

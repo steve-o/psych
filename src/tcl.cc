@@ -11,19 +11,19 @@
 static const char* kPsychFlexRecordName = "psych";
 
 /* Tcl exported API. */
-static const char* kBasicFunctionName = "psych_republish";
-static const char* kResetFunctionName = "psych_hard_republish";
+static const char* kBasicApi = "psych_republish";
+static const char* kResetApi = "psych_hard_republish";
 
 static const char* kTclApi[] = {
-	kBasicFunctionName,
-	kResetFunctionName
+	kBasicApi,
+	kResetApi
 };
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Register Tcl API.
  */
 bool
-psych::psych_t::register_tcl_api (const char* id)
+psych::psych_t::RegisterTclApi (const char* id)
 {
 	for (size_t i = 0; i < _countof (kTclApi); ++i) {
 		registerCommand (id, kTclApi[i]);
@@ -35,7 +35,7 @@ psych::psych_t::register_tcl_api (const char* id)
 /* Unregister Tcl API.
  */
 bool
-psych::psych_t::unregister_tcl_api (const char* id)
+psych::psych_t::UnregisterTclApi (const char* id)
 {
 	for (size_t i = 0; i < _countof (kTclApi); ++i) {
 		deregisterCommand (id, kTclApi[i]);

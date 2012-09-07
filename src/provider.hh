@@ -48,28 +48,28 @@ namespace psych
 		provider_t (const config_t& config, std::shared_ptr<rfa_t> rfa, std::shared_ptr<rfa::common::EventQueue> event_queue);
 		~provider_t();
 
-		bool init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
+		bool Init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
 
-		bool createItemStream (const char* name, std::shared_ptr<item_stream_t> item_stream) throw (rfa::common::InvalidUsageException);
-		bool send (item_stream_t& item_stream, rfa::common::Msg& msg) throw (rfa::common::InvalidUsageException);
+		bool CreateItemStream (const char* name, std::shared_ptr<item_stream_t> item_stream) throw (rfa::common::InvalidUsageException);
+		bool Send (item_stream_t*const item_stream, rfa::message::RespMsg*const msg) throw (rfa::common::InvalidUsageException);
 
-		uint8_t getRwfMajorVersion() {
+		uint8_t GetRwfMajorVersion() {
 			return min_rwf_major_version_;
 		}
-		uint8_t getRwfMinorVersion() {
+		uint8_t GetRwfMinorVersion() {
 			return min_rwf_minor_version_;
 		}
 
 	private:
-		void getServiceDirectory (rfa::data::Map& map);
-		void getServiceFilterList (rfa::data::FilterList& filterList);
-		void getServiceInformation (rfa::data::ElementList& elementList);
-		void getServiceCapabilities (rfa::data::Array& capabilities);
-		void getServiceDictionaries (rfa::data::Array& dictionaries);
-#if 1
-		void getDirectoryQoS (rfa::data::Array& qos);
+		void GetServiceDirectory (rfa::data::Map*const map);
+		void GetServiceFilterList (rfa::data::FilterList*const filterList);
+		void GetServiceInformation (rfa::data::ElementList*const elementList);
+		void GetServiceCapabilities (rfa::data::Array*const capabilities);
+		void GetServiceDictionaries (rfa::data::Array*const dictionaries);
+#ifndef SRC_DIST_REQUIRES_QOS_FIXED
+		void GetDirectoryQoS (rfa::data::Array*const qos);
 #endif
-		void getServiceState (rfa::data::ElementList& elementList);
+		void GetServiceState (rfa::data::ElementList*const elementList);
 
 		const config_t& config_;
 

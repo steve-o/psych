@@ -111,34 +111,34 @@ namespace psych
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 //  From Xml tree
-		bool parseDomElement (const xercesc::DOMElement* elem);
-		bool parseConfigNode (const xercesc::DOMNode* node);
-		bool parseSnmpNode (const xercesc::DOMNode* node);
-		bool parseAgentXNode (const xercesc::DOMNode* node);
-		bool parseRfaNode (const xercesc::DOMNode* node);
-		bool parseServiceNode (const xercesc::DOMNode* node);
-		bool parseDacsNode (const xercesc::DOMNode* node);
-		bool parseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
-		bool parseServerNode (const xercesc::DOMNode* node, std::string& server);
-		bool parsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
-		bool parseLoginNode (const xercesc::DOMNode* node, session_config_t& session);
-		bool parseSessionNode (const xercesc::DOMNode* node);
-		bool parseMonitorNode (const xercesc::DOMNode* node);
-		bool parseEventQueueNode (const xercesc::DOMNode* node);
-		bool parseVendorNode (const xercesc::DOMNode* node);
-		bool parsePsychNode (const xercesc::DOMNode* node);
-		bool parseResourceNode (const xercesc::DOMNode* node);
-		bool parseLinkNode (const xercesc::DOMNode* node, std::string* source, std::string* rel, unsigned long* id, std::string* href);
-		bool parseFieldNode (const xercesc::DOMNode* node, std::string* name, int* id);
-		bool parseItemNode (const xercesc::DOMNode* node, std::string* name, std::string* topic, std::string* src);
+		bool ParseDomElement (const xercesc::DOMElement* elem);
+		bool ParseConfigNode (const xercesc::DOMNode* node);
+		bool ParseSnmpNode (const xercesc::DOMNode* node);
+		bool ParseAgentXNode (const xercesc::DOMNode* node);
+		bool ParseRfaNode (const xercesc::DOMNode* node);
+		bool ParseServiceNode (const xercesc::DOMNode* node);
+		bool ParseDacsNode (const xercesc::DOMNode* node);
+		bool ParseConnectionNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool ParseServerNode (const xercesc::DOMNode* node, std::string& server);
+		bool ParsePublisherNode (const xercesc::DOMNode* node, std::string& publisher);
+		bool ParseLoginNode (const xercesc::DOMNode* node, session_config_t& session);
+		bool ParseSessionNode (const xercesc::DOMNode* node);
+		bool ParseMonitorNode (const xercesc::DOMNode* node);
+		bool ParseEventQueueNode (const xercesc::DOMNode* node);
+		bool ParseVendorNode (const xercesc::DOMNode* node);
+		bool ParsePsychNode (const xercesc::DOMNode* node);
+		bool ParseResourceNode (const xercesc::DOMNode* node);
+		bool ParseLinkNode (const xercesc::DOMNode* node, std::string* source, std::string* rel, unsigned long* id, std::string* href);
+		bool ParseFieldNode (const xercesc::DOMNode* node, std::string* name, int* id);
+		bool ParseItemNode (const xercesc::DOMNode* node, std::string* name, std::string* topic, std::string* src);
 #endif
 
 //   From Json tree
-		bool parseConfig (const chromium::DictionaryValue* dict_val);
-		bool parseSession (const chromium::DictionaryValue* dict_val);
-		bool parseResource (const chromium::DictionaryValue* dict_val);
+		bool ParseConfig (const chromium::DictionaryValue* dict_val);
+		bool ParseSession (const chromium::DictionaryValue* dict_val);
+		bool ParseResource (const chromium::DictionaryValue* dict_val);
 
-		bool validate();
+		bool Validate();
 
 //  SNMP implant.
 		bool is_snmp_enabled;

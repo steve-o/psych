@@ -41,8 +41,10 @@
 #include "config.hh"
 #include "provider.hh"
 
-namespace logging {
-namespace rfa {
+namespace logging
+{
+namespace rfa
+{
 	class LogEventProvider;
 }
 }
@@ -140,7 +142,7 @@ namespace psych
 		{
 		}
 
-		void operator()()
+		void Run()
 		{
 			while (event_queue_->isActive()) {
 				event_queue_->dispatch (rfa::common::Dispatchable::InfiniteWait);
@@ -156,7 +158,7 @@ namespace psych
 	class time_base_t
 	{
 	public:
-		virtual bool processTimer (const boost::chrono::time_point<Clock, Duration>& t) = 0;
+		virtual bool OnTimer (const boost::chrono::time_point<Clock, Duration>& t) = 0;
 	};
 
 	template<class Clock, class Duration = typename Clock::duration>
@@ -171,16 +173,16 @@ namespace psych
 			CHECK(nullptr != cb_);
 		}
 
-		void operator()()
+		void Run()
 		{
 			try {
 				while (true) {
 					boost::this_thread::sleep_until (due_time_);
-					if (!cb_->processTimer (due_time_))
+					if (!cb_->OnTimer (due_time_))
 						break;
 					due_time_ += td_;
 				}
-			} catch (boost::thread_interrupted const&) {
+			} catch (const boost::thread_interrupted&) {
 				LOG(INFO) << "Timer thread interrupted.";
 			}
 		}
@@ -209,19 +211,21 @@ namespace psych
 #endif
 
 /* Application entry point. */
-		int run();
+		int Run();
 
 /* Core initialization. */
-		bool init();
+		bool Init();
 
 /* Reset state suitable for recalling init(). */
-		void clear();
+		void Clear();
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Plugin termination point. */
-		virtual void destroy() override;
+		virtual void destroy() override {
+		       Destroy();
+		}
 #else
-		void destroy();
+		void Destroy();
 #endif
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
@@ -230,7 +234,7 @@ namespace psych
 #endif
 
 /* Configured period timer entry point. */
-		bool processTimer (const boost::chrono::time_point<boost::chrono::system_clock>& t) override;
+		bool OnTimer (const boost::chrono::time_point<boost::chrono::system_clock>& t) override;
 
 /* Global list of all plugin instances.  AE owns pointer. */
 		static std::list<psych_t*> global_list_;
@@ -239,14 +243,14 @@ namespace psych
 	private:
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 /* Tcl API registration */
-		bool register_tcl_api (const char* id);
-		bool unregister_tcl_api (const char* id);
+		bool RegisterTclApi (const char* id);
+		bool UnregisterTclApi (const char* id);
 #endif
 
 /* Run core event loop. */
-		void mainLoop();
+		void MainLoop();
 
-		bool get_next_interval (boost::posix_time::ptime* t);
+		bool GetNextInterval (boost::posix_time::ptime* t);
 
 #ifndef CONFIG_PSYCH_AS_APPLICATION
 		int tclPsychRepublish (const vpf::CommandInfo& cmdInfo, vpf::TCLCommandData& cmdData);
@@ -259,13 +263,13 @@ namespace psych
 		bool httpPsychQuery (std::map<resource_t, std::shared_ptr<connection_t>, resource_compare_t>& connections, int flags);
 
 /* Parse libcurl driven HTTP response. */
-		bool processHttpResponse (connection_t* connection, std::string* engine_version, boost::posix_time::ptime* open_time, boost::posix_time::ptime* close_time, std::vector<std::string>* columns, std::vector<std::pair<std::string, std::vector<double>>>* rows);
+		bool OnHttpResponse (connection_t* connection, std::string* engine_version, boost::posix_time::ptime* open_time, boost::posix_time::ptime* close_time, std::vector<std::string>* columns, std::vector<std::pair<std::string, std::vector<double>>>* rows);
 
 /* Broadcast out message. */
-		bool sendRefresh (const resource_t& resource, const std::string& engine_version, const boost::posix_time::ptime& open_time, const boost::posix_time::ptime& close_time, const std::vector<std::string>& columns, const std::vector<std::pair<std::string, std::vector<double>>>& rows) throw (rfa::common::InvalidUsageException);
+		bool SendRefresh (const resource_t& resource, const std::string& engine_version, const boost::posix_time::ptime& open_time, const boost::posix_time::ptime& close_time, const std::vector<std::string>& columns, const std::vector<std::pair<std::string, std::vector<double>>>& rows) throw (rfa::common::InvalidUsageException);
 
 /* Generate DACS lock from entity code list */
-		bool generatePELock (rfa::common::Buffer* buf, const rfa::common::RFA_Vector<unsigned long>& peList);
+		bool GeneratePELock (rfa::common::Buffer* buf, const rfa::common::RFA_Vector<unsigned long>& peList);
 
 /* Unique instance number per process. */
 		LONG instance_;

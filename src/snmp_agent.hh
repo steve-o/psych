@@ -28,8 +28,8 @@ namespace psych
 		snmp_agent_t (psych_t& psych);
 		~snmp_agent_t();
 
-		bool run();
-		void clear();
+		bool Run();
+		void Clear();
 
 	private:
 		psych_t& psych_;

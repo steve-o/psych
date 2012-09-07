@@ -7,7 +7,7 @@
 #include <rfa/rfa.hh>
 
 const char*
-psych::severity_string (
+internal::severity_string (
 	const int severity_
 	)
 {
@@ -24,7 +24,7 @@ psych::severity_string (
 }
 
 const char*
-psych::classification_string (
+internal::classification_string (
 	const int classification_
 	)
 {

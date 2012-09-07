@@ -119,7 +119,7 @@ main (
 	timecaps_t timecaps (1 /* ms */);
 
 	psych::psych_t psych;
-	return psych.run();
+	return psych.Run();
 }
 
 /* eof */

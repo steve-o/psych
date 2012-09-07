@@ -32,7 +32,7 @@ public:
 		s[1] = s_[1];
 	}
 
-	void operator()()
+	void Run()
 	{
 		assert (s[0] != INVALID_SOCKET);
 
@@ -74,16 +74,16 @@ psych::snmp_agent_t::snmp_agent_t (psych::psych_t& psych) :
 //	s_ ({ INVALID_SOCKET, INVALID_SOCKET }),
 {
 	s_[0] = s_[1] = INVALID_SOCKET;
-	run();
+	Run();
 }
 
 psych::snmp_agent_t::~snmp_agent_t (void)
 {
-	clear();
+	Clear();
 }
 
 bool
-psych::snmp_agent_t::run (void)
+psych::snmp_agent_t::Run (void)
 {
 /* Instance already running. */
 	if (InterlockedExchangeAdd (&ref_count_, 1L) > 0)
@@ -188,7 +188,7 @@ psych::snmp_agent_t::run (void)
 	event_pump_.reset (new snmp::event_pump_t (s_));
 	if (!(bool)event_pump_)
 		return false;
-	thread_.reset (new boost::thread (*event_pump_.get()));
+	thread_.reset (new boost::thread ([this](){ event_pump_->Run(); }));
 	if (!(bool)thread_)
 		return false;
 	LOG(INFO) << "SNMP init complete.";
@@ -199,7 +199,7 @@ psych::snmp_agent_t::run (void)
  */
 
 void
-psych::snmp_agent_t::clear (void)
+psych::snmp_agent_t::Clear (void)
 {
 	LOG(INFO) << "clear()";
 	if (0 == ref_count_)

@@ -132,7 +132,7 @@ namespace
 
 /* no API to unregister type. */
 
-		virtual void* newInstance (const char* type)
+		virtual void* newInstance (const char* type) override
 		{
 			assert (0 == strcmp (kPluginType, type));
 			return new psych::psych_t();

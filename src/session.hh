@@ -59,36 +59,36 @@ namespace psych
 		session_t (provider_t& provider, const unsigned instance_id, const session_config_t& config, std::shared_ptr<rfa_t> rfa, std::shared_ptr<rfa::common::EventQueue> event_queue);
 		~session_t();
 
-		bool init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
-		bool createOMMProvider() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
+		bool Init() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
+		bool CreateOMMProvider() throw (rfa::common::InvalidConfigurationException, rfa::common::InvalidUsageException);
 
-		bool createItemStream (const char* name, rfa::sessionLayer::ItemToken** token) throw (rfa::common::InvalidUsageException);
-		uint32_t send (rfa::common::Msg& msg, rfa::sessionLayer::ItemToken& token, void* closure) throw (rfa::common::InvalidUsageException);
+		bool CreateItemStream (const char* name, rfa::sessionLayer::ItemToken** token) throw (rfa::common::InvalidUsageException);
+		uint32_t Send (rfa::message::RespMsg*const msg, rfa::sessionLayer::ItemToken*const token, void* closure) throw (rfa::common::InvalidUsageException);
 
 /* RFA event callback. */
-		void processEvent (const rfa::common::Event& event);
+		void processEvent (const rfa::common::Event& event) override;
 
-		uint8_t getRwfMajorVersion() {
+		uint8_t GetRwfMajorVersion() {
 			return rwf_major_version_;
 		}
-		uint8_t getRwfMinorVersion() {
+		uint8_t GetRwfMinorVersion() {
 			return rwf_minor_version_;
 		}
 
 	private:
-		uint32_t submit (rfa::common::Msg& msg, rfa::sessionLayer::ItemToken& token, void* closure) throw (rfa::common::InvalidUsageException);
+		uint32_t Submit (rfa::message::RespMsg*const msg, rfa::sessionLayer::ItemToken*const token, void* closure) throw (rfa::common::InvalidUsageException);
 
-		void processOMMItemEvent (const rfa::sessionLayer::OMMItemEvent& event);
-                void processRespMsg (const rfa::message::RespMsg& msg);
-                void processLoginResponse (const rfa::message::RespMsg& msg);
-                void processLoginSuccess (const rfa::message::RespMsg& msg);
-                void processLoginSuspect (const rfa::message::RespMsg& msg);
-                void processLoginClosed (const rfa::message::RespMsg& msg);
-		void processOMMCmdErrorEvent (const rfa::sessionLayer::OMMCmdErrorEvent& event);
+		void OnOMMItemEvent (const rfa::sessionLayer::OMMItemEvent& event);
+                void OnRespMsg (const rfa::message::RespMsg& msg);
+                void OnLoginResponse (const rfa::message::RespMsg& msg);
+                void OnLoginSuccess (const rfa::message::RespMsg& msg);
+                void OnLoginSuspect (const rfa::message::RespMsg& msg);
+                void OnLoginClosed (const rfa::message::RespMsg& msg);
+		void OnOMMCmdErrorEvent (const rfa::sessionLayer::OMMCmdErrorEvent& event);
 
-		bool sendLoginRequest() throw (rfa::common::InvalidUsageException);
-		bool sendDirectoryResponse();
-		bool resetTokens();
+		bool SendLoginRequest() throw (rfa::common::InvalidUsageException);
+		bool SendDirectoryResponse();
+		bool ResetTokens();
 
 		provider_t& provider_;
 		const session_config_t& config_;

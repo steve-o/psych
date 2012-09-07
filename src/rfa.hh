@@ -23,7 +23,7 @@ namespace psych
 		rfa_t (const config_t& config);
 		~rfa_t();
 
-		bool init() throw (rfa::common::InvalidUsageException);
+		bool Init() throw (rfa::common::InvalidUsageException);
 		bool VerifyVersion();
 
 	private:

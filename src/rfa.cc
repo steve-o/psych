@@ -59,7 +59,7 @@ psych::rfa_t::~rfa_t()
 }
 
 bool
-psych::rfa_t::init()
+psych::rfa_t::Init()
 {
 	VLOG(2) << "Initializing RFA.";
 	rfa::common::Context::initialize();

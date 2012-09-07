@@ -18,7 +18,6 @@ namespace logging
 {
 namespace rfa
 {
-	namespace internal = ::psych::internal;
 
 	class LogEventProvider :
 		public ::rfa::common::Client,
@@ -32,11 +31,11 @@ namespace rfa
 		bool Unregister();
 
 /* RFA event callback. */
-		void processEvent (const ::rfa::common::Event& event_);
+		void processEvent (const ::rfa::common::Event& event_) override;
 
 	private:
 
-		void processLoggerNotifyEvent (const ::rfa::logger::LoggerNotifyEvent& event_);
+		void OnLoggerNotifyEvent (const ::rfa::logger::LoggerNotifyEvent& event_);
 
 		const psych::config_t& config_;
 
