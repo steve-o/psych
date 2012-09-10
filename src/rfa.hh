@@ -27,7 +27,6 @@ namespace psych
 		bool VerifyVersion();
 
 	private:
-
 		const config_t& config_;		
 
 /* Live config database */

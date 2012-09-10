@@ -15,6 +15,8 @@ static const RFA_String kContextName ("RFA");
 static const RFA_String kConnectionType ("RSSL_NIPROV");
 
 /* Translate forward slashes into backward slashes for broken Rfa library.
+ * Microsoft supprt both slashes in APIs since DOS 2.0:
+ * http://bytes.com/topic/python/answers/23123-when-did-windows-start-accepting-forward-slash-path-separator
  */
 static
 void

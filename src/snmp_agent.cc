@@ -19,13 +19,16 @@
 #include "psych.hh"
 #include "psychMIB.hh"
 
+/* Net-SNMP requires application name for logging and optional configuration. */
 static const char* kSnmpApplicationName = "psych";
 
+/* Atomic reference count for single threaded initialisation. */
 LONG volatile psych::snmp_agent_t::ref_count_ = 0;
 
 class psych::snmp::event_pump_t
 {
 public:
+/* A socket to break the SNMP message pump. */
 	event_pump_t (SOCKET s_[2])
 	{
 		s[0] = s_[0];
@@ -89,6 +92,7 @@ psych::snmp_agent_t::Run (void)
 	if (InterlockedExchangeAdd (&ref_count_, 1L) > 0)
 		return true;
 
+/* Sub-agent connects to a master agent, otherwise become oneself a master agent. */
 	if (psych_.config_.is_agentx_subagent)
 	{
 		LOG(INFO) << "Configuring as SNMP AgentX sub-agent.";
@@ -104,6 +108,7 @@ psych::snmp_agent_t::Run (void)
 					  TRUE);
 	}
 
+/* SNMP file logging offers additional error detail, especially with >= Net-SNMP 5.7. */
 	if (!psych_.config_.snmp_filelog.empty()) {
 		LOG(INFO) << "Setting Net-SNMP filelog to \"" << psych_.config_.snmp_filelog << "\"";
 		::snmp_enable_filelog (psych_.config_.snmp_filelog.c_str(), 0);

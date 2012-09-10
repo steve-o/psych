@@ -12,6 +12,7 @@
 namespace switches {
 
 extern const char kEnableDCHECK[];
+extern const char kEnableLogging[];
 extern const char kV[];
 extern const char kVModule[];
 

@@ -34,7 +34,6 @@ namespace rfa
 		void processEvent (const ::rfa::common::Event& event_) override;
 
 	private:
-
 		void OnLoggerNotifyEvent (const ::rfa::logger::LoggerNotifyEvent& event_);
 
 		const psych::config_t& config_;
