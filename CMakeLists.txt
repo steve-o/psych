@@ -155,8 +155,8 @@ set(LIBRARY_OUTPUT_PATH  ${CMAKE_BINARY_DIR}/lib)
 add_definitions(
 	-DWIN32
 	-DWIN32_LEAN_AND_MEAN
-# Windows Server 2008 R2, Windows 7
-	-D_WIN32_WINNT=0x0601
+# Windows Server 2008 R1 for SI/MRI hosting, Windows Vista and newer
+	-D_WIN32_WINNT=0x0600
 # libcurl static imports
 	-DCURL_STATICLIB
 # Net-SNMP Autoconf overrides
