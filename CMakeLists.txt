@@ -8,7 +8,9 @@ project (psych)
 
 set(PSYCH_VERSION_MAJOR 3)
 set(PSYCH_VERSION_MINOR 1)
-set(PSYCH_VERSION_BUILD 15)
+set(PSYCH_VERSION_BUILD 16)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 # libcurl, tested 7.25.0
 if (MSVC11)
@@ -74,43 +76,9 @@ set(VHAYU_LIBRARIES
 )
 
 # Thomson Reuters Robust Foundation API
-if (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(RFA_BUILD_TYPE "Debug_MDd")
-else (CMAKE_BUILD_TYPE STREQUAL "Debug")
-	set(RFA_BUILD_TYPE "Release_MD")
-endif (CMAKE_BUILD_TYPE STREQUAL "Debug")
 set(RFA_ROOT D:/rfa7.2.1.L1.win-shared.rrg)
-set(RFA_INCLUDE_DIRS
-	${RFA_ROOT}/Include
-	${RFA_ROOT}/Include/rwf
-)
-set(RFA_LIBRARY_DIR ${RFA_ROOT}/Libs/WIN_64_VS100/${RFA_BUILD_TYPE})
-set(RFA_LIBRARY_DIRS ${RFA_LIBRARY_DIR})
-set(RFA_LIBRARIES
-        RFA7_Common100_x64.lib
-        RFA7_Config100_x64.lib
-        RFA7_Logger100_x64.lib
-        RFA7_Data100_x64.lib
-        RFA7_Connections100_x64.lib
-        RFA7_Connections_OMM100_x64.lib
-        RFA7_SessionLayer100_x64.lib
-        DACS7_lock100_x64.lib
-)
-set(RFA_RUNTIME_LIBRARIES
-	${RFA_LIBRARY_DIR}/RFA7_Common100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_Config100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_Logger100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_Data100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_Connections100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_Connections_OMM100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_SessionLayer_OMM100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_SessionLayer100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_RSSL_Adapter100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_RSSL_Cons_Adapter100_x64.dll
-	${RFA_LIBRARY_DIR}/RFA7_RSSL_Prov_Adapter100_x64.dll
-	${RFA_LIBRARY_DIR}/DACS7_lock100_x64.dll
-	${RFA_LIBRARY_DIR}/dacs4wn64.dll
-)
+find_package (RFA 7.2 COMPONENTS Common Config Connections Connections_OMM Data Logger SessionLayer SessionLayer_OMM lock REQUIRED)
+file(GLOB RFA_SHARED_LIBRARIES "${RFA_ROOT}/Libs/WIN_64_VS100/Release_MD/*.dll")
 
 # Boost headers plus built libraries
 set(BOOST_ROOT D:/boost_1_51_0)
@@ -163,7 +131,7 @@ add_definitions(
 	-DHAVE_STDINT_H
 	-DHAVE_SOCKLEN_T
 # RFA version
-        -DRFA_LIBRARY_VERSION="7.2.1."
+        -DRFA_LIBRARY_VERSION="${RFA_MAJOR_VERSION}.${RFA_MINOR_VERSION}.${RFA_SUBMINOR_VERSION}."
 # production release
 	-DOFFICIAL_BUILD
 )
@@ -316,7 +284,7 @@ endif (CONFIG_PSYCH_AS_APPLICATION)
 file(GLOB mibs "${CMAKE_CURRENT_SOURCE_DIR}/mibs/*.txt")
 
 install (TARGETS psych rfa_version DESTINATION bin)
-install (FILES ${RFA_RUNTIME_LIBRARIES} DESTINATION bin)
+install (FILES ${RFA_SHARED_LIBRARIES} DESTINATION bin)
 install (FILES ${config} DESTINATION config)
 install (FILES ${mibs} DESTINATION mibs)
 
