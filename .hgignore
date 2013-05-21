@@ -3,3 +3,5 @@ syntax: regexp
 ^debug/
 Psych-MIB-01.txt
 ^build-msvc/
+syntax: glob
+Thumbs.db
