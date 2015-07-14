@@ -132,7 +132,7 @@
 		panicThreshold="1000"
 		httpProxy="10.65.98.107:8080"
 		dnsCacheTimeout="60"
-		href="http://pipeline2m.velocity.marketpsychdata.com/feed/minutely/">
+		href="http://marketpsychdata.com/feed/minutely/">
 
 <!-- 2.2.2 Equities -->
 		<resource name="Equity">

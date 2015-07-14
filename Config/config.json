@@ -188,7 +188,7 @@
 
 // Base href for all links.
 
-   "base_url":"http://trmpmitr:kR39[b$vN4@pipeline2m.velocity.marketpsychdata.com/feed/minutely/",
+   "base_url":"http://user:password@marketpsychdata.com/feed/minutely/",
 
 // "Resources": equities, currencies, commodities, etc.
 
